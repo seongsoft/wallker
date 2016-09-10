@@ -8,16 +8,16 @@ import android.view.View;
 import android.view.ViewGroup;
 
 /**
- * Created by 성빈 on 2016-09-07.
+ * Created by BeINone on 2016-09-07.
  */
 public class TestFragment extends Fragment {
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View rootView = inflater.inflate(R.layout.fragment_test, container, false);
+        View v = inflater.inflate(R.layout.fragment_test, container, false);
 
-        return rootView;
+        return v;
     }
 
 }
