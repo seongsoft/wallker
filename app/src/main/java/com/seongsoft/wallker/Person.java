@@ -94,6 +94,10 @@ public class Person implements
         }
     }
 
+    public void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+    }
+
     public boolean isPermissionDenied() { return mPermissionDenied; }
 
     public void setPermissionDenied(boolean permissionDenied) { mPermissionDenied = permissionDenied; }

@@ -38,6 +38,8 @@ public class MapViewFragment extends Fragment implements
     private Person mPerson;
     private Marker mCurrentMarker;
 
+    private boolean mRequestingLocationUpdates;
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,10 +91,17 @@ public class MapViewFragment extends Fragment implements
         super.onResume();
         mMapView.onResume();
 
-        if (mPerson != null && mPerson.isPermissionDenied()) {
-            // Permission was not granted, display error dialog.
-            showMissingPermissionError();
-            mPerson.setPermissionDenied(false);
+        if (mPerson != null) {
+            if (mPerson.isPermissionDenied()) {
+                // Permission was not granted, display error dialog.
+                showMissingPermissionError();
+                mPerson.setPermissionDenied(false);
+            }
+
+            if (!mRequestingLocationUpdates) {
+                mPerson.startLocationUpdates();
+                mRequestingLocationUpdates = true;
+            }
         }
     }
 
@@ -100,6 +109,7 @@ public class MapViewFragment extends Fragment implements
     public void onPause() {
         super.onPause();
         mMapView.onPause();
+        mPerson.stopLocationUpdates();
     }
 
     @Override
@@ -123,7 +133,11 @@ public class MapViewFragment extends Fragment implements
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         if (mPerson == null) mPerson = new Person(mContext, mGoogleApiClient, this);
-        mPerson.startLocationUpdates();
+
+        if (!mRequestingLocationUpdates) {
+            mPerson.startLocationUpdates();
+            mRequestingLocationUpdates = true;
+        }
     }
 
     @Override
