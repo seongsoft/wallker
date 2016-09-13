@@ -35,12 +35,12 @@ public class Person implements
 
     PersonLocationListener mListener;
 
-    public Person(Context context, GoogleApiClient googleApiClient, PersonLocationListener listener) {
+    public Person(Context context, GoogleApiClient googleApiClient, LocationRequest locationRequest,
+                  PersonLocationListener listener) {
         mContext = context;
         mGoogleApiClient = googleApiClient;
+        mLocationRequest = locationRequest;
         mListener = listener;
-
-        createLocationRequest();
     }
 
     @Override
@@ -87,11 +87,6 @@ public class Person implements
         // Start location updates.
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
-
-        if (mCurrentLocation != null) {
-            Log.i("Location", "Latitude: " + mCurrentLocation.getLatitude()
-                    + ", Longitude: " + mCurrentLocation.getLongitude());
-        }
     }
 
     public void stopLocationUpdates() {
@@ -101,13 +96,6 @@ public class Person implements
     public boolean isPermissionDenied() { return mPermissionDenied; }
 
     public void setPermissionDenied(boolean permissionDenied) { mPermissionDenied = permissionDenied; }
-
-    private void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(5000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    }
 
     /**
      * 위치 변경이 감지되었을 때 알림
