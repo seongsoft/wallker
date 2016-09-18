@@ -28,4 +28,7 @@ dependencies {
     compile files('libs/libDaumMapEngineApi.jar')
     compile 'com.google.android.gms:play-services-maps:8.4.0'
     compile 'com.google.android.gms:play-services:8.4.0'
+    compile 'com.google.maps:google-maps-services:0.1.6'
+    compile 'com.google.maps.android:android-maps-utils:0.3.4'
+
 }

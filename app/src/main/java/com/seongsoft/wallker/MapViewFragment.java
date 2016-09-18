@@ -3,6 +3,7 @@ package com.seongsoft.wallker;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -23,9 +24,13 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.maps.GeoApiContext;
+import com.google.maps.model.LatLng;
+
+import java.util.ArrayList;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -40,11 +45,16 @@ public class MapViewFragment extends Fragment implements
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
     private LocationRequest mLocationRequest;
-
+    private Location mLocaion;
+    private GeoApiContext mGeoContext;
     private Person mPerson;
     private Marker mCurrentMarker;
-
+    private boolean walkState = false;
+    private RoadTracker mRoadTracker;
     private boolean mRequestingLocationUpdates;
+    private ArrayList<LatLng> mCheckedLocations = new ArrayList<LatLng>();        //지나간 좌표 들을 저장하는 List
+    private com.google.android.gms.maps.model.LatLng startLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
+    private com.google.android.gms.maps.model.LatLng endLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -58,6 +68,7 @@ public class MapViewFragment extends Fragment implements
                 .build();
 
         createLocationRequest();
+        mGeoContext = new GeoApiContext().setApiKey("");
     }
 
     @Nullable
@@ -85,7 +96,7 @@ public class MapViewFragment extends Fragment implements
                 mMap = googleMap;
                 Treasure treasure = new Treasure(mContext, googleMap);
                 treasure.createTreasure();
-
+                mRoadTracker = new RoadTracker(mMap, mGeoContext);
 //                mMap.addGroundOverlay(new GroundOverlayOptions()
 //                        .position(new LatLng(-33.8688184, 151.20930), 10f)
 //                        .image(treasureBitmapDescriptor));
@@ -177,16 +188,29 @@ public class MapViewFragment extends Fragment implements
     @Override
     public void onPersonLocationChanged(Location location) {
         // 이전 위치 마커 지우기
+        mLocaion = location;
         if (mCurrentMarker != null) mCurrentMarker.remove();
 
         /* 현재 위치에 마커 생성 */
         MarkerOptions markerOptions = new MarkerOptions();
-        markerOptions.position(new LatLng(location.getLatitude(), location.getLongitude()));
+        markerOptions.position(new com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude()));
         mCurrentMarker = mMap.addMarker(markerOptions);
 
         // 현재 위치로 시점 이동
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                new LatLng(location.getLatitude(), location.getLongitude()), 18));
+                new com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude()), 18));
+        if(walkState){
+            endLatLng = new  com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude());
+            mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
+            drawPath();
+            startLatLng = endLatLng;
+        }
+    }
+    private void drawPath(){
+        PolylineOptions options = new PolylineOptions().add(startLatLng)
+                .add(endLatLng).width(15).color(Color.BLACK).geodesic(true);
+        mMap.addPolyline(options);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(endLatLng, 18));
     }
 
     private void createLocationRequest() {
@@ -200,5 +224,17 @@ public class MapViewFragment extends Fragment implements
         PermissionUtils.PermissionDeniedDialog
                 .newInstance(true).show(getChildFragmentManager(), "dialog");
     }
-
+    public void changeWalkState(){
+        walkState = !walkState;
+    }
+    public boolean isWalkOn(){
+        return walkState;
+    }
+    public void walkStart(){
+        mCheckedLocations.add(new LatLng(mLocaion.getLatitude(), mLocaion.getLongitude()));
+        startLatLng = new  com.google.android.gms.maps.model.LatLng(mLocaion.getLatitude(), mLocaion.getLongitude());
+    }
+    public void walkEnd(){
+        mRoadTracker.drawCorrentPath(mCheckedLocations);
+    }
 }
