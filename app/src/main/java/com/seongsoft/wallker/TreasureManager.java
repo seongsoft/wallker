@@ -11,15 +11,13 @@ import android.util.Log;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -36,13 +34,12 @@ public class TreasureManager {
     private static final double MAX_LONGITUDE = 129.571666;
     private static final double LATITUDE_RANGE = MAX_LATITUDE - MIN_LATITUDE;
     private static final double LONGITUDE_RANGE = MAX_LONGITUDE - MIN_LONGITUDE;
+    private static final float GROUNDOVERLAY_WIDTH = 10.0f;
 
     private Context mContext;
     private GeoApiContext mGeoApiContext;
     private DatabaseManager mDBManager;
     private ProgressDialog mDialog;
-
-    private GoogleMap mMap;
 
     public TreasureManager(Context context, GeoApiContext geoApiContext) {
         mContext = context;
@@ -50,26 +47,44 @@ public class TreasureManager {
         mDBManager = new DatabaseManager(context);
     }
 
-    public void createTreasure() {
-        new CreateTreasureTask().execute();
+    public void createTreasure(LatLngBounds bounds, GoogleMap map) {
+        final double latitudeRange = bounds.northeast.latitude - bounds.southwest.latitude;
+        final double longitudeRange = bounds.northeast.longitude - bounds.southwest.longitude;
+
+        double latitude = bounds.southwest.latitude + (latitudeRange * Math.random());
+        double longitude = bounds.southwest.longitude + (longitudeRange * Math.random());
+
+        Treasure treasure = new Treasure(latitude, longitude);
+        mDBManager.insertTreasure(treasure);
+
+        displayTreasure(new LatLng(latitude, longitude), map);
+
+//        new CreateTreasureTask().execute();
     }
 
-    public void displayTreasure(GoogleMap map, LatLngBounds bounds) {
-        List<Treasure> treasures = mDBManager.selectTreasure(bounds);
+    public void displayTreasure(LatLng latLng, GoogleMap map) {
+        BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
 
-        Bitmap treasureBitmap = resizeMarker(R.drawable.treasure, 50, 50);
-        BitmapDescriptor treasureBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(treasureBitmap);
+        map.addGroundOverlay(new GroundOverlayOptions()
+                .position(latLng, GROUNDOVERLAY_WIDTH)
+                .image(treasureBitmapDescriptor));
+    }
 
-        map.clear();
+    public void displayTreasure(LatLngBounds bounds, GoogleMap map) {
+        BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
 
-        for (Treasure treasure : treasures) {
-            map.addMarker(new MarkerOptions()
-                    .position(new LatLng(treasure.getLatitude(), treasure.getLongitude()))
-                    .icon(treasureBitmapDescriptor));
+        DatabaseManager dbManager = new DatabaseManager(mContext);
+        List<Treasure> treasures = dbManager.selectTreasure(bounds);
+
+        for (int index = 0; index < treasures.size(); index++) {
+            map.addGroundOverlay(new GroundOverlayOptions()
+                    .position(new LatLng(treasures.get(index).getLatitude(),
+                            treasures.get(index).getLongitude()), GROUNDOVERLAY_WIDTH)
+                    .image(treasureBitmapDescriptor));
         }
     }
 
-    private Bitmap resizeMarker(int id, int width, int height) {
+    private Bitmap resizeGroundOverlay(int id, int width, int height) {
         Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), id);
         Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
 
@@ -77,14 +92,15 @@ public class TreasureManager {
     }
 
     private void setLastUpdateDate() {
-        try {
-            FileOutputStream fos = mContext.openFileOutput(DataConst.LAST_UPDATE_DATE_FILE_NAME,
-                    Context.MODE_PRIVATE);
-            String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-            fos.write(currentDate.getBytes());
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        String lastUpdateDate = mDBManager.selectDate();
+        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+        if (lastUpdateDate == null) {
+            // 어플리케이션 다운로드 후 첫 생성 시
+            mDBManager.insertDate(currentDate);
+        } else if (!currentDate.equals(lastUpdateDate)) {
+            // 최근 업데이트 날짜가 오늘이 아닌 경우
+            mDBManager.updateDate(currentDate);
         }
     }
 
@@ -106,121 +122,6 @@ public class TreasureManager {
             mDialog.setMessage("보물 생성중입니다. 잠시만 기다려주세요.");
             mDialog.show();
         }
-
-//        @Override
-//        protected ArrayList<double[]> doInBackground(Void... params) {
-//            Random rand = new Random(System.currentTimeMillis());
-//            ArrayList<double[]> treasureLocations = new ArrayList<>();
-//
-//            int cnt = 0;
-//
-//            for (double minLatitude = MIN_LATITUDE, minLongitude = MIN_LONGITUDE,
-//                 maxLatitude = MIN_LATITUDE + 0.01, maxLongitude = MIN_LATITUDE + 0.02;
-//                 maxLatitude <= MAX_LATITUDE && maxLongitude <= MAX_LONGITUDE;
-//                 minLatitude += 0.01, minLongitude += 0.02, maxLatitude += 0.01, maxLongitude += 0.02) {
-//                for (int i = 0; i < 10; i++) {
-//                    double randLatitude = minLatitude + (maxLatitude - minLatitude) * rand.nextDouble();
-//                    double randLongitude = minLongitude + (maxLongitude - minLongitude) + rand.nextDouble();
-//
-////                mDBManager.insertTreasure(randLatitude, randLongitude);
-//
-//                    treasureLocations.add(new double[]{randLatitude, randLongitude});
-//                    cnt++;
-//                }
-//
-//                Log.d("treasure", "latitude: " + maxLatitude + ", longitude: " + maxLongitude);
-//                Log.d("count", String.valueOf(cnt));
-//            }
-//
-//            return treasureLocations;
-//        }
-
-//        @Override
-//        protected void onPostExecute(ArrayList<double[]> treasureLocations) {
-//            Bitmap treasureBitmap = resizeMarker(R.drawable.treasure, 100, 100);
-//            BitmapDescriptor treasureBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(treasureBitmap);
-//
-//            for (int index = 0; index < treasureLocations.size(); index++) {
-//                double latitude = treasureLocations.get(index)[0];
-//                double longitude = treasureLocations.get(index)[1];
-//
-//                mMap.addGroundOverlay(new GroundOverlayOptions()
-//                        .position(new LatLng(latitude, longitude), 10f)
-//                        .image(treasureBitmapDescriptor));
-//
-//                Log.d("marker", String.valueOf(latitude));
-//            }
-//
-//            mDialog.dismiss();
-//        }
-
-//        @Override
-//        protected ArrayList<LatLng> doInBackground(Void... params) {
-//            ArrayList<LatLng> treasureLocations = new ArrayList<>();
-//
-//            for (int count = 0; count < 15000; count++) {
-//                double latitude = MIN_LATITUDE + LATITUDE_RANGE * Math.random();
-//                double longitude = MIN_LONGITUDE + LONGITUDE_RANGE * Math.random();
-//                LatLng location = new LatLng(latitude, longitude);
-//
-//                treasureLocations.add(location);
-//
-//                Log.d("treasure", String.valueOf(count));
-//            }
-//
-//            return treasureLocations;
-//        }
-
-//        @Override
-//        protected void onPostExecute(ArrayList<LatLng> treasureLocations) {
-//            Bitmap treasureBitmap = resizeMarker(R.drawable.treasure, 100, 100);
-//            BitmapDescriptor treasureBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(treasureBitmap);
-//
-//            for (int index = 0; index < treasureLocations.size(); index++) {
-//                mMap.addGroundOverlay(new GroundOverlayOptions()
-//                        .position(treasureLocations.get(index), 10f)
-//                        .image(treasureBitmapDescriptor));
-//
-//                Log.d("groundOverlay", String.valueOf(index));
-//            }
-//
-//            mDialog.dismiss();
-//            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(treasureLocations.get(0), 18));
-//        }
-
-//        @Override
-//        protected LatLng[] doInBackground(Void... params) {
-//            LatLng[] treasureLocations = new LatLng[15000];
-//
-//            for (int index = 0; index < 15000; index++) {
-//                double latitude = MIN_LATITUDE + LATITUDE_RANGE * Math.random();
-//                double longitude = MIN_LONGITUDE + LONGITUDE_RANGE * Math.random();
-//                LatLng location = new LatLng(latitude, longitude);
-//
-//                treasureLocations[index] = location;
-//
-//                Log.d("treasure", String.valueOf(index));
-//            }
-//
-//            return treasureLocations;
-//        }
-
-//        @Override
-//        protected void onPostExecute(LatLng[] treasureLocations) {
-//            Bitmap treasureBitmap = resizeMarker(R.drawable.treasure, 100, 100);
-//            BitmapDescriptor treasureBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(treasureBitmap);
-//
-//            for (int index = 0; index < treasureLocations.length; index++) {
-//                mMap.addGroundOverlay(new GroundOverlayOptions()
-//                        .position(treasureLocations[index], 20)
-//                        .image(treasureBitmapDescriptor));
-//
-//                Log.d("groundOverlay", String.valueOf(index));
-//            }
-//
-//            mDialog.dismiss();
-//            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(treasureLocations[0], 18));
-//        }
 
         @Override
         protected LatLng[] doInBackground(Void... params) {
@@ -285,6 +186,11 @@ public class TreasureManager {
             mDialog.dismiss();
         }
 
+    }
+
+    private BitmapDescriptor getTreasureBitmapDescriptor() {
+        Bitmap treasureBitmap = resizeGroundOverlay(R.drawable.treasure, 50, 50);
+        return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 
 }

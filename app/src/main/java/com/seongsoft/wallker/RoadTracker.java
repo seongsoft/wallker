@@ -21,18 +21,18 @@ public class RoadTracker {
 
     private GoogleMap mMap;
     private List<SnappedPoint> mSnappedPoints;
-    private GeoApiContext mContext;
-    private ArrayList<LatLng> mCapturedLocations = new ArrayList<LatLng>();        //지나간 좌표 들을 저장하는 List
+    private GeoApiContext mGeoApiContext;
+    private ArrayList<LatLng> mCapturedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
     private static final int PAGINATION_OVERLAP = 5;
     private static final int PAGE_SIZE_LIMIT = 100;
 
 
-    public RoadTracker (GoogleMap map, GeoApiContext context){
+    public RoadTracker(GoogleMap map, GeoApiContext geoApiContext){
         mMap = map;
-        mContext = context;
+        mGeoApiContext = geoApiContext;
     }
 
-    private void drawSnapedLine(List<SnappedPoint> snappedPoints){
+    private void drawSnappedLine(List<SnappedPoint> snappedPoints){
         mSnappedPoints = snappedPoints;
 
         com.google.android.gms.maps.model.LatLng[] mapPoints =
@@ -89,10 +89,10 @@ public class RoadTracker {
         return snappedPoints;
     }
 
-    public void drawCorrentPath(ArrayList<LatLng> checkedLocations){
+    public void drawCurrentPath(ArrayList<LatLng> checkedLocations){
         mCapturedLocations = checkedLocations;
         try {
-            drawSnapedLine(snapToRoads(mContext));
+            drawSnappedLine(snapToRoads(mGeoApiContext));
         } catch (Exception e) {
             e.printStackTrace();
         }

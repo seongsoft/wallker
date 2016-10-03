@@ -16,6 +16,8 @@ import android.widget.Toast;
  */
 public abstract class PermissionUtils {
 
+    public static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+
     /**
      * Requests the fine location permission. If a rationale with an additional explanation should
      * be shown to the user, displays a dialog that triggers the request.
