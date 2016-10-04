@@ -1,16 +1,29 @@
 package com.seongsoft.wallker;
 
-import android.graphics.Color;
+import android.util.Log;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.LatLng;
 import com.google.maps.model.SnappedPoint;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,82 +32,164 @@ import java.util.List;
  */
 public class RoadTracker {
 
+    private static final String TAG = "RoadTracker";
     private GoogleMap mMap;
-    private List<SnappedPoint> mSnappedPoints;
-    private GeoApiContext mGeoApiContext;
-    private ArrayList<LatLng> mCapturedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
+    private GeoApiContext mContext;
+    private ArrayList<LatLng> mCapturedLocations = new ArrayList<LatLng>();        //지나간 좌표 들을 저장하는 List
     private static final int PAGINATION_OVERLAP = 5;
     private static final int PAGE_SIZE_LIMIT = 100;
+    private ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints;
 
+    int totalDistance;
 
-    public RoadTracker(GoogleMap map, GeoApiContext geoApiContext){
+    public RoadTracker(GoogleMap map){
         mMap = map;
-        mGeoApiContext = geoApiContext;
     }
 
-    private void drawSnappedLine(List<SnappedPoint> snappedPoints){
-        mSnappedPoints = snappedPoints;
+    //    public void drawCorrentPath(ArrayList<LatLng> checkedLocations){
+//        getJsonData().get();
+//    }
+    public ArrayList<com.google.android.gms.maps.model.LatLng> getJsonData(final LatLng startPoint, final LatLng endPoint){
+        Thread thread = new Thread(){
+            @Override
+            public void run(){
+                HttpClient httpClient = new DefaultHttpClient();
 
-        com.google.android.gms.maps.model.LatLng[] mapPoints =
-                new com.google.android.gms.maps.model.LatLng[mSnappedPoints.size()];
-        int i = 0;
-        LatLngBounds.Builder bounds = new LatLngBounds.Builder();
-        for (SnappedPoint point : mSnappedPoints) {
-            mapPoints[i] = new com.google.android.gms.maps.model.LatLng(point.location.lat,
-                    point.location.lng);
-            bounds.include(mapPoints[i]);
-            i += 1;
-        }
+                String urlString = "https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&format=json&appKey=19baeeb9-08cc-3548-9369-897639ec1e52";
+                try{
+                    URI uri = new URI(urlString);
 
-        mMap.addPolyline(new PolylineOptions().add(mapPoints).color(Color.BLUE));
-        mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 0));
-    }
+                    HttpPost httpPost = new HttpPost();
+                    httpPost.setURI(uri);
 
-    private List<SnappedPoint> snapToRoads(GeoApiContext context) throws Exception {
-        List<SnappedPoint> snappedPoints = new ArrayList<>();
+                    List<BasicNameValuePair> nameValuePairs = new ArrayList<BasicNameValuePair>();
+                    nameValuePairs.add(new BasicNameValuePair("startX", Double.toString(startPoint.lng)));
+                    nameValuePairs.add(new BasicNameValuePair("startY", Double.toString(startPoint.lat)));
 
-        int offset = 0;
-        while (offset < mCapturedLocations.size()) {
-            // Calculate which points to include in this request. We can't exceed the APIs
-            // maximum and we want to ensure some overlap so the API can infer a good location for
-            // the first few points in each request.
-            if (offset > 0) {
-                offset -= PAGINATION_OVERLAP;   // Rewind to include some previous points
-            }
-            int lowerBound = offset;
-            int upperBound = Math.min(offset + PAGE_SIZE_LIMIT, mCapturedLocations.size());
+                    nameValuePairs.add(new BasicNameValuePair("endX", Double.toString(endPoint.lng)));
+                    nameValuePairs.add(new BasicNameValuePair("endY", Double.toString(endPoint.lat)));
 
-            // Grab the data we need for this page.
-            LatLng[] page = mCapturedLocations
-                    .subList(lowerBound, upperBound)
-                    .toArray(new LatLng[upperBound - lowerBound]);
+                    nameValuePairs.add(new BasicNameValuePair("startName", "출발지"));
+                    nameValuePairs.add(new BasicNameValuePair("endName", "도착지"));
 
-            // Perform the request. Because we have interpolate=true, we will get extra data points
-            // between our originally requested path. To ensure we can concatenate these points, we
-            // only start adding once we've hit the first new point (i.e. skip the overlap).
-            SnappedPoint[] points = RoadsApi.snapToRoads(context, true, page).await();
-            boolean passedOverlap = false;
-            for (SnappedPoint point : points) {
-                if (offset == 0 || point.originalIndex >= PAGINATION_OVERLAP) {
-                    passedOverlap = true;
+                    nameValuePairs.add(new BasicNameValuePair("reqCoordType", "WGS84GEO"));
+                    nameValuePairs.add(new BasicNameValuePair("resCoordType", "WGS84GEO"));
+
+                    httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+
+                    HttpResponse response = httpClient.execute(httpPost);
+
+                    int code = response.getStatusLine().getStatusCode();
+                    String message = response.getStatusLine().getReasonPhrase();
+                    Log.d(TAG, "run: " + message);
+                    String responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
+
+                    String strData = "";
+
+                    Log.d(TAG, "0\n");
+                    JSONObject jAr = new JSONObject(responseString);
+
+                    Log.d(TAG, "1\n");
+
+                    JSONArray features = jAr.getJSONArray("features");
+                    Log.d(TAG, "2,"+ features.length() +"\n");
+                    mapPoints = new ArrayList<>();
+
+
+                    for(int i=0; i<features.length(); i++)
+                    {
+                        JSONObject test2 = features.getJSONObject(i);
+                        if(i == 0){
+                            JSONObject properties = test2.getJSONObject("properties");
+                            totalDistance += properties.getInt("totalDistance");
+                        }
+                        JSONObject geometry = test2.getJSONObject("geometry");
+                        JSONArray coordinates = geometry.getJSONArray("coordinates");
+
+
+                        String geoType = geometry.getString("type");
+                        if(geoType.equals("Point"))
+                        {
+                            double lonJson = coordinates.getDouble(0);
+                            double latJson = coordinates.getDouble(1);
+
+                            Log.d(TAG, "-");
+                            Log.d(TAG, lonJson+","+latJson+"\n");
+                            com.google.android.gms.maps.model.LatLng point = new com.google.android.gms.maps.model.LatLng(latJson, lonJson);
+                            mapPoints.add(point);
+
+                        }
+                        if(geoType.equals("LineString"))
+                        {
+                            for(int j=0; j<coordinates.length(); j++)
+                            {
+                                JSONArray JLinePoint = coordinates.getJSONArray(j);
+                                double lonJson = JLinePoint.getDouble(0);
+                                double latJson = JLinePoint.getDouble(1);
+
+                                Log.d(TAG, "-");
+                                Log.d(TAG, lonJson+","+latJson+"\n");
+                                com.google.android.gms.maps.model.LatLng point = new com.google.android.gms.maps.model.LatLng(latJson, lonJson);
+
+                                mapPoints.add(point);
+
+                            }
+                        }
+
+
+                    }
+
+                    //DashPathEffect dashPath2 = new DashPathEffect(new float[]{0,0}, 0); //실선
+
+			        /*
+			        JSONObject test = features.getJSONObject(0);
+
+			        JSONObject properties = test.getJSONObject("properties");
+
+			        Log.d(TAG, "3\n");
+			        //JSONObject index = properties.getJSONObject("index");
+			        String nodeType = properties.getString("nodeType");
+
+
+			        Log.d(TAG, "4 " + nodeType+"\n");
+
+			        if(nodeType.equals("POINT")){
+			        	String turnType = properties.getString("turnType");
+
+			        	Log.d(TAG, "5 " + turnType+"\n");
+			        }
+			        */
+
+                    // 하위 객체에서 데이터를 추출
+                    //strData += features.getString("name") + "\n";
+
+
+                } catch (URISyntaxException e) {
+                    Log.e(TAG, e.getLocalizedMessage());
+                    e.printStackTrace();
+                } catch (ClientProtocolException e) {
+                    Log.e(TAG, e.getLocalizedMessage());
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    Log.e(TAG, e.getLocalizedMessage());
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
-                if (passedOverlap) {
-                    snappedPoints.add(point);
-                }
+
             }
+        };
+        thread.start();
 
-            offset = upperBound;
-        }
-
-        return snappedPoints;
-    }
-
-    public void drawCurrentPath(ArrayList<LatLng> checkedLocations){
-        mCapturedLocations = checkedLocations;
-        try {
-            drawSnappedLine(snapToRoads(mGeoApiContext));
-        } catch (Exception e) {
+        try{
+            thread.join();
+        }catch (InterruptedException e){
             e.printStackTrace();
         }
+        return mapPoints;
+    }
+    public int getDistance(){
+        return totalDistance;
     }
 }

@@ -1,20 +1,28 @@
 package com.seongsoft.wallker;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.Toast;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements
         NavigationView.OnNavigationItemSelectedListener {
+    private AlertDialog mDialog = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,7 +31,7 @@ public class MainActivity extends AppCompatActivity implements
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-//        deleteDatabase("wallker.db");
+        deleteDatabase("wallker.db");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -44,11 +52,34 @@ public class MainActivity extends AppCompatActivity implements
             public void onClick(View view) {
                 if(!mapViewFragment.isWalkOn()) {
                     Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
+//                    LayoutInflater inflater = getLayoutInflater();
+//                    final View dialogView = inflater.inflate(R.layout.dialog_walking_name, null);
+//                    AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+//                    builder.setTitle("걸음명");
+//                    builder.setView(dialogView);
+//                    builder.setPositiveButton("Complite", new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            EditText editText = (EditText)dialogView.findViewById(R.id.dialog_edit);
+//                        }
+//                    });
+//                    builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+//                        //Dialog에 "Cancel"이라는 타이틀의 버튼을 설정
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            // TODO Auto-generated method stub
+//                            //멤버 정보의 입력을 취소하고 Dialog를 종료하는 작업
+//                            //취소하였기에 특별한 작업은 없고 '취소'했다는 메세지만 Toast로 출력
+//                            Toast.makeText(MainActivity.this, "멤버 추가를 취소합니다", Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
+//                    AlertDialog dialog = builder.create();
+
                     mapViewFragment.walkStart();
                 }
                 else{
                     Toast.makeText(getApplicationContext(), "걸음 종료", Toast.LENGTH_SHORT).show();
-                    mapViewFragment.walkEnd();
+
                 }
                 mapViewFragment.changeWalkState();
             }

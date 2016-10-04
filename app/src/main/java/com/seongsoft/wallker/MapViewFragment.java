@@ -50,6 +50,7 @@ public class MapViewFragment extends Fragment implements
 
     public static final float ZOOM = 18.0f;
 
+    String walk_name;
     String currentDate;
     ArrayList<com.google.android.gms.maps.model.LatLng> walkAllPath = new ArrayList<>();
     int totalDistance;
@@ -216,17 +217,6 @@ public class MapViewFragment extends Fragment implements
                 List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
                 if (treasures != null) {
                     for (int index = 0; index < treasures.size(); index++) {
-//                        double minLatitude = treasures.get(index).getLatitude() - 0.0001;
-//                        double maxLatitude = treasures.get(index).getLatitude() + 0.0001;
-//                        double minLongitude = treasures.get(index).getLongitude() - 0.0001;
-//                        double maxLongitude = treasures.get(index).getLongitude() + 0.0001;
-//                        if (mCurrLocation.getLatitude() >= minLatitude
-//                                && mCurrLocation.getLatitude() <= maxLatitude
-//                                && mCurrLocation.getLongitude() >= minLongitude
-//                                && mCurrLocation.getLongitude() <= maxLongitude) {
-//                            Toast.makeText(getContext(), "보물 획득", Toast.LENGTH_SHORT).show();
-//                        }
-
                         if (calDistance(
                                 mCurrLocation.getLatitude(),
                                 mCurrLocation.getLongitude(),
@@ -301,13 +291,15 @@ public class MapViewFragment extends Fragment implements
         return walkState;
     }
 
-    public void walkStart(){
+    public void walkStart(String name){
         mRoadTracker = new RoadTracker(mMap);
+        walk_name = name;
         currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
         startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
     }
 
     public void walkEnd(){
+        Walking walk = new Walking(walk_name, totalDistance,walkAllPath, currentDate);
     }
 
     public double calDistance(double lat1, double lon1, double lat2, double lon2){
