@@ -49,6 +49,10 @@ public class MapViewFragment extends Fragment implements
 
     public static final float ZOOM = 18.0f;
 
+    String currentDate;
+    ArrayList<com.google.android.gms.maps.model.LatLng> walkAllPath = new ArrayList<>();
+    int totalDistance;
+
     private MapView mMapView;
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
@@ -64,8 +68,8 @@ public class MapViewFragment extends Fragment implements
     private RoadTracker mRoadTracker;
     private boolean mRequestingLocationUpdates;
     private ArrayList<LatLng> mCheckedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
-    private com.google.android.gms.maps.model.LatLng startLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
-    private com.google.android.gms.maps.model.LatLng endLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
+    private LatLng startLatLng = new  LatLng(0, 0);
+    private LatLng endLatLng = new  LatLng(0, 0);
 
     private boolean mPermissionDenied;
     private boolean mCameraMoveStarted;
@@ -116,7 +120,6 @@ public class MapViewFragment extends Fragment implements
 //                        new com.google.android.gms.maps.model.LatLng(
 //                                37.2635727, 127.02860090000001), ZOOM));
 
-                mRoadTracker = new RoadTracker(mMap, mGeoContext);
 //                mMap.addGroundOverlay(new GroundOverlayOptions()
 //                        .position(new LatLng(-33.8688184, 151.20930), 10f)
 //                        .image(treasureBitmapDescriptor));
@@ -226,7 +229,7 @@ public class MapViewFragment extends Fragment implements
                 mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
 
         if (mCurrentMarker != null) mCurrentMarker.remove();
-        mMap.clear();
+
 
         /* 현재 위치에 마커 생성 */
         mCurrentMarker = mMap.addMarker(new MarkerOptions()
@@ -238,9 +241,12 @@ public class MapViewFragment extends Fragment implements
                 new com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude()), ZOOM));
 
         if (walkState) {
-            endLatLng = new  com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude());
+            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
-            drawPath();
+            ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
+            walkAllPath.addAll(path);
+            totalDistance += mRoadTracker.getDistance();
+            drawPath(path);
             startLatLng = endLatLng;
         }
     }
@@ -271,12 +277,12 @@ public class MapViewFragment extends Fragment implements
     }
 
     public void walkStart(){
-        mCheckedLocations.add(new LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude()));
-        startLatLng = new  com.google.android.gms.maps.model.LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
+        mRoadTracker = new RoadTracker(mMap);
+        currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
     }
 
     public void walkEnd(){
-        mRoadTracker.drawCurrentPath(mCheckedLocations);
     }
 
     public double calDistance(double lat1, double lon1, double lat2, double lon2){
@@ -332,11 +338,11 @@ public class MapViewFragment extends Fragment implements
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 
-    private void drawPath() {
-        PolylineOptions options = new PolylineOptions().add(startLatLng)
-                .add(endLatLng).width(15).color(Color.BLACK).geodesic(true);
-        mMap.addPolyline(options);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(endLatLng, ZOOM));
+    private void drawPath(ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints){
+        com.google.android.gms.maps.model.LatLng[] pathPoints = new com.google.android.gms.maps.model.LatLng[mapPoints.size()];
+        pathPoints = mapPoints.toArray(pathPoints);
+        mMap.addPolyline(new PolylineOptions().add(pathPoints).color(Color.BLUE));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pathPoints[pathPoints.length - 1], 18));
     }
 
     private void showMissingPermissionError() {
