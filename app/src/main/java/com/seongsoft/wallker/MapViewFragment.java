@@ -33,10 +33,10 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.LatLng;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+
+import static com.seongsoft.wallker.DistanceUtils.calDistance;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -109,7 +109,6 @@ public class MapViewFragment extends Fragment implements
             public void onMapReady(GoogleMap googleMap) {
                 mMap = googleMap;
 
-//                mMap.setOnCameraChangeListener(MapViewFragment.this);
                 mMap.setOnCameraMoveStartedListener(MapViewFragment.this);
                 mMap.setOnCameraIdleListener(MapViewFragment.this);
 
@@ -118,9 +117,6 @@ public class MapViewFragment extends Fragment implements
 //                                37.2635727, 127.02860090000001), ZOOM));
 
                 mRoadTracker = new RoadTracker(mMap, mGeoContext);
-//                mMap.addGroundOverlay(new GroundOverlayOptions()
-//                        .position(new LatLng(-33.8688184, 151.20930), 10f)
-//                        .image(treasureBitmapDescriptor));
             }
         });
 
@@ -200,7 +196,7 @@ public class MapViewFragment extends Fragment implements
 
     @Override
     public void onCameraIdle() {
-        LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+        final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
         if (mCameraMoveStarted) {
             if (mMap.getCameraPosition().zoom == ZOOM) {
                 if (mMovedDistance >= 100.0) {
@@ -209,30 +205,26 @@ public class MapViewFragment extends Fragment implements
                     mMovedDistance = 0;
                 }
 
-                // 보물 획득 확인
-                List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
+                List<Treasure> treasures
+                        = mTreasureManager.displayTreasure(bounds, mMap);
                 if (treasures != null) {
                     for (int index = 0; index < treasures.size(); index++) {
-//                        double minLatitude = treasures.get(index).getLatitude() - 0.0001;
-//                        double maxLatitude = treasures.get(index).getLatitude() + 0.0001;
-//                        double minLongitude = treasures.get(index).getLongitude() - 0.0001;
-//                        double maxLongitude = treasures.get(index).getLongitude() + 0.0001;
-//                        if (mCurrLocation.getLatitude() >= minLatitude
-//                                && mCurrLocation.getLatitude() <= maxLatitude
-//                                && mCurrLocation.getLongitude() >= minLongitude
-//                                && mCurrLocation.getLongitude() <= maxLongitude) {
-//                            Toast.makeText(getContext(), "보물 획득", Toast.LENGTH_SHORT).show();
-//                        }
-
-                        if (calDistance(
-                                mCurrLocation.getLatitude(),
-                                mCurrLocation.getLongitude(),
-                                treasures.get(index).getLatitude(),
-                                treasures.get(index).getLongitude()) <= 10.0) {
-                            Toast.makeText(getContext(), "보물 획득", Toast.LENGTH_SHORT).show();
+                        final double treasureLat = treasures.get(index).getLatitude();
+                        final double treasureLng = treasures.get(index).getLongitude();
+                        // 보물 획득 확인
+                        if (checkGetTreasure(treasureLat, treasureLng)) {
+                            GetTreasureDialogFragment.newInstance(new GetTreasureDialogFragment.GetTreasureDialogListener() {
+                                @Override
+                                public void onGet() {
+                                    new DatabaseManager(getContext())
+                                            .deleteTreasure(treasureLat, treasureLng);
+                                    mTreasureManager.displayTreasure(bounds, mMap);
+                                }
+                            }).show(getChildFragmentManager(), null);
                         }
                     }
                 }
+
             }
         }
     }
@@ -304,29 +296,14 @@ public class MapViewFragment extends Fragment implements
         mRoadTracker.drawCurrentPath(mCheckedLocations);
     }
 
-    public double calDistance(double lat1, double lon1, double lat2, double lon2){
+    private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
+        if (calDistance(
+                mCurrLocation.getLatitude(), mCurrLocation.getLongitude(),
+                treasureLat, treasureLng) <= 10.0) {
+            return true;
+        }
 
-        double theta, dist;
-        theta = lon1 - lon2;
-        dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1))
-                * Math.cos(deg2rad(lat2)) * Math.cos(deg2rad(theta));
-        dist = Math.acos(dist);
-        dist = rad2deg(dist);
-
-        dist = dist * 60 * 1.1515;
-        dist = dist * 1.609344;    // 단위 mile 에서 km 변환.
-        dist = dist * 1000.0;      // 단위  km 에서 m 로 변환
-
-        return dist;
-    }
-
-    private boolean isFirstUpdateOnToday() {
-        String lastUpdateDate = mDBManager.selectDate();
-        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-
-        if (lastUpdateDate == null) return false;
-
-        return !lastUpdateDate.equals(currentDate);
+        return false;
     }
 
     private void createLocationRequest() {
@@ -367,16 +344,6 @@ public class MapViewFragment extends Fragment implements
     private void showMissingPermissionError() {
         PermissionUtils.PermissionDeniedDialog
                 .newInstance(true).show(getChildFragmentManager(), "dialog");
-    }
-
-    // 주어진 도(degree) 값을 라디언으로 변환
-    private double deg2rad(double deg){
-        return (double)(deg * Math.PI / (double)180d);
-    }
-
-    // 주어진 라디언(radian) 값을 도(degree) 값으로 변환
-    private double rad2deg(double rad){
-        return (double)(rad * (double)180d / Math.PI);
     }
 
 }
