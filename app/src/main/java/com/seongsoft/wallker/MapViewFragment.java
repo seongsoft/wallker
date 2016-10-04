@@ -33,10 +33,10 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.LatLng;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-
-import static com.seongsoft.wallker.DistanceUtils.calDistance;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -115,8 +115,6 @@ public class MapViewFragment extends Fragment implements
 //                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
 //                        new com.google.android.gms.maps.model.LatLng(
 //                                37.2635727, 127.02860090000001), ZOOM));
-
-                mRoadTracker = new RoadTracker(mMap, mGeoContext);
             }
         });
 
@@ -243,7 +241,6 @@ public class MapViewFragment extends Fragment implements
                 mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
 
         if (mCurrentMarker != null) mCurrentMarker.remove();
-        mMap.clear();
 
         /* 현재 위치에 마커 생성 */
         mCurrentMarker = mMap.addMarker(new MarkerOptions()
@@ -255,9 +252,12 @@ public class MapViewFragment extends Fragment implements
                 new com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude()), ZOOM));
 
         if (walkState) {
-            endLatLng = new  com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude());
+            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
-            drawPath();
+            ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
+            walkAllPath.addAll(path);
+            totalDistance += mRoadTracker.getDistance();
+            drawPath(path);
             startLatLng = endLatLng;
         }
     }
@@ -288,12 +288,14 @@ public class MapViewFragment extends Fragment implements
     }
 
     public void walkStart(){
-        mCheckedLocations.add(new LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude()));
-        startLatLng = new  com.google.android.gms.maps.model.LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
+        mRoadTracker = new RoadTracker(mMap);
+        walk_name = name;
+        currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
     }
 
     public void walkEnd(){
-        mRoadTracker.drawCurrentPath(mCheckedLocations);
+        Walking walk = new Walking(walk_name, totalDistance,walkAllPath, currentDate);
     }
 
     private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
@@ -334,11 +336,11 @@ public class MapViewFragment extends Fragment implements
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 
-    private void drawPath() {
-        PolylineOptions options = new PolylineOptions().add(startLatLng)
-                .add(endLatLng).width(15).color(Color.BLACK).geodesic(true);
-        mMap.addPolyline(options);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(endLatLng, ZOOM));
+    private void drawPath(ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints){
+        com.google.android.gms.maps.model.LatLng[] pathPoints = new com.google.android.gms.maps.model.LatLng[mapPoints.size()];
+        pathPoints = mapPoints.toArray(pathPoints);
+        mMap.addPolyline(new PolylineOptions().add(pathPoints).color(Color.BLUE));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pathPoints[pathPoints.length - 1], 18));
     }
 
     private void showMissingPermissionError() {
