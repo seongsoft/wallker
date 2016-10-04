@@ -73,7 +73,7 @@ public class DatabaseManager {
     public void deleteTreasure(double latitude, double longitude) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "DELETE FROM " + TREASURE_TABLE
-                + " WHERE latitude=" + latitude + "AND longitude=" + longitude + ";";
+                + " WHERE latitude=" + latitude + " AND longitude=" + longitude + ";";
         db.execSQL(sql);
         db.close();
     }
