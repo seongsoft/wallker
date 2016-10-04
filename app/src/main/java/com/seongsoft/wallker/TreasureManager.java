@@ -19,6 +19,7 @@ import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -70,7 +71,7 @@ public class TreasureManager {
                 .image(treasureBitmapDescriptor));
     }
 
-    public void displayTreasure(LatLngBounds bounds, GoogleMap map) {
+    public ArrayList<Treasure> displayTreasure(LatLngBounds bounds, GoogleMap map) {
         BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
 
         DatabaseManager dbManager = new DatabaseManager(mContext);
@@ -82,6 +83,8 @@ public class TreasureManager {
                             treasures.get(index).getLongitude()), GROUNDOVERLAY_WIDTH)
                     .image(treasureBitmapDescriptor));
         }
+
+        return (ArrayList<Treasure>) treasures;
     }
 
     private Bitmap resizeGroundOverlay(int id, int width, int height) {
