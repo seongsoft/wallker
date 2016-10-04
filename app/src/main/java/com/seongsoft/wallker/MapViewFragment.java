@@ -36,6 +36,7 @@ import com.google.maps.model.LatLng;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -207,7 +208,31 @@ public class MapViewFragment extends Fragment implements
                     mCameraMoveStarted = false;
                     mMovedDistance = 0;
                 }
-                mTreasureManager.displayTreasure(bounds, mMap);
+
+                // 보물 획득 확인
+                List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
+                if (treasures != null) {
+                    for (int index = 0; index < treasures.size(); index++) {
+//                        double minLatitude = treasures.get(index).getLatitude() - 0.0001;
+//                        double maxLatitude = treasures.get(index).getLatitude() + 0.0001;
+//                        double minLongitude = treasures.get(index).getLongitude() - 0.0001;
+//                        double maxLongitude = treasures.get(index).getLongitude() + 0.0001;
+//                        if (mCurrLocation.getLatitude() >= minLatitude
+//                                && mCurrLocation.getLatitude() <= maxLatitude
+//                                && mCurrLocation.getLongitude() >= minLongitude
+//                                && mCurrLocation.getLongitude() <= maxLongitude) {
+//                            Toast.makeText(getContext(), "보물 획득", Toast.LENGTH_SHORT).show();
+//                        }
+
+                        if (calDistance(
+                                mCurrLocation.getLatitude(),
+                                mCurrLocation.getLongitude(),
+                                treasures.get(index).getLatitude(),
+                                treasures.get(index).getLongitude()) <= 10.0) {
+                            Toast.makeText(getContext(), "보물 획득", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
             }
         }
     }
