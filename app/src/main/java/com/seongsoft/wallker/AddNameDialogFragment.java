@@ -35,7 +35,7 @@ public class AddNameDialogFragment extends DialogFragment {
         View view = inflater.inflate(R.layout.dialog_add_name, null);
         mName = (EditText)view.findViewById(R.id.id_txt_password);
         builder.setView(view)
-                .setPositiveButton("Sign in",
+                .setPositiveButton("확인",
                         new DialogInterface.OnClickListener()
                         {
                             @Override
@@ -44,7 +44,7 @@ public class AddNameDialogFragment extends DialogFragment {
                                 listener.onNameInputComplete(mName
                                 .getText().toString());
                             }
-                        }).setNegativeButton("Cancel", null);
+                        }).setNegativeButton("취소", null);
         return builder.create();
     }
 }

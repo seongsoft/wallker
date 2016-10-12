@@ -1,6 +1,5 @@
 package com.seongsoft.wallker;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -15,7 +14,6 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
@@ -23,6 +21,11 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements
         NavigationView.OnNavigationItemSelectedListener {
+
+    private DatabaseManager mDBManager;
+
+    private boolean isMap = true;
+
     private AlertDialog mDialog = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,18 +45,38 @@ public class MainActivity extends AppCompatActivity implements
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        mDBManager = new DatabaseManager(this);
+
         final MapViewFragment mapViewFragment = new MapViewFragment();
+
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton switchFAB = (FloatingActionButton) findViewById(R.id.fab_switch);
+        switchFAB.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isMap) {
+
+                } else {
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, mapViewFragment)
+                            .commit();
+                }
+                isMap = !isMap;
+            }
+        });
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_walking);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(!mapViewFragment.isWalkOn()) {
+                    Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
 //                    LayoutInflater inflater = getLayoutInflater();
 //                    final View dialogView = inflater.inflate(R.layout.dialog_walking_name, null);
-//                    AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+//                    AlertDialog.Bilder builder = new AlertDialog.Builder(getApplicationContext());
 //                    builder.setTitle("걸음명");
 //                    builder.setView(dialogView);
 //                    builder.setPositiveButton("Complite", new DialogInterface.OnClickListener() {
@@ -72,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements
 //                            Toast.makeText(MainActivity.this, "멤버 추가를 취소합니다", Toast.LENGTH_SHORT).show();
 //                        }
 //                    });
-//                    AlertDialog dialog = builder.create()
+//                    AlertDialog dialog = builder.create();
                     mapViewFragment.stopLocationUpdates();
                     AddNameDialogFragment dialog = AddNameDialogFragment.newInstance(new AddNameDialogFragment.NameInputListener() {
                         @Override
@@ -90,6 +113,11 @@ public class MainActivity extends AppCompatActivity implements
                 }
             }
         });
+
+        setLastUpdateDate();
+
+        // distance 테이블에 레코드가 없을 때 이동거리가 0인 레코드를 하나 만들어줌.
+        if (!mDBManager.distanceExists()) mDBManager.insertDistance();
     }
 
     @Override
@@ -142,8 +170,22 @@ public class MainActivity extends AppCompatActivity implements
         }else if(id == R.id.nav_treasure){
 
         }
+
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    private void setLastUpdateDate() {
+        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+        if (mDBManager.dateExists()) {
+            String lastUpdateDate = mDBManager.selectDate();
+            // 최근 업데이트 날짜가 오늘이 아닌 경우
+            if (!currentDate.equals(lastUpdateDate)) mDBManager.updateDate(currentDate);
+        } else {
+            mDBManager.insertDate(currentDate);
+        }
+    }
+
 }

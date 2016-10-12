@@ -5,9 +5,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.maps.GeoApiContext;
-import com.google.maps.RoadsApi;
 import com.google.maps.model.LatLng;
-import com.google.maps.model.SnappedPoint;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;

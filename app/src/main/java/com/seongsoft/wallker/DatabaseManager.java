@@ -15,15 +15,28 @@ import java.util.ArrayList;
 public class DatabaseManager {
 
     private static final String DB_NAME = "wallker.db";
-    private static final String TREASURE_TABLE = "treasure";
-    private static final String DATE_TABLE = "date";
     public static final int DB_VERSION = 1;
+
+    private static final String TREASURE_TABLE = "treasure";
+    private static final String LATITUDE = "latitude";
+    private static final String LONGITUDE = "longitude";
+
+    private static final String DATE_TABLE = "date";
+    private static final String LAST_UPDATE_DATE = "last_update_date";
 
     private static final String WALKING_TABLE = "walking";
     private static final String WALKING_NAME = "walking_name";
     private static final String DISTANCE = "distance";
     private static final String LINES = "lines";
     private static final String DATES = "dates";
+
+    private static final String DISTANCE_TABLE = "distance";
+    private static final String TODAY_DISTANCE = "today_distance";
+    private static final String TOTAL_DISTANCE = "total_distance";
+
+    private static final String INVENTORY_TABLE = "inventory";
+    private static final String NUM_TREASURES = "num_treasures";
+    private static final String MONEY = "money";
 
     private DatabaseHelper mDBHelper;
 
@@ -33,6 +46,7 @@ public class DatabaseManager {
         mContext = context;
         mDBHelper = new DatabaseHelper(context, DB_NAME, null, DB_VERSION);
     }
+
     public void insertWalking(Walking walking){
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "INSERT INTO " + WALKING_TABLE
@@ -55,10 +69,27 @@ public class DatabaseManager {
     public void insertDate(String date) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "INSERT INTO " + DATE_TABLE
-                + " VAULES (" + date + ");";
+                + " VALUES (" + date + ");";
         db.execSQL(sql);
         db.close();
     }
+
+    public void insertDistance() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "INSERT INTO " + DISTANCE_TABLE
+                + " VALUES (0, 0);";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void insertInventory() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "INSERT INTO " + INVENTORY_TABLE
+                + " VALUES (0, 0);";
+        db.execSQL(sql);
+        db.close();
+    }
+
     public ArrayList<Walking> selectAllWalking(){
         SQLiteDatabase db = mDBHelper.getReadableDatabase();
         String sql = "SELECT * FROM " + WALKING_TABLE
@@ -75,25 +106,22 @@ public class DatabaseManager {
         }
         return allList;
     }
-//    public ArrayList<Walking> selectWalkingByDate(long data){
-//
-//    }
 
     public ArrayList<Treasure> selectTreasure(LatLngBounds bounds) {
         SQLiteDatabase db = mDBHelper.getReadableDatabase();
         String sql = "SELECT * FROM " + TREASURE_TABLE
-                + " WHERE latitude>=" + bounds.southwest.latitude
-                + " AND longitude>=" + bounds.southwest.longitude
-                + " AND latitude<=" + bounds.northeast.latitude
-                + " AND longitude<=" + bounds.northeast.longitude + ";";
+                + " WHERE " + LATITUDE + ">=" + bounds.southwest.latitude
+                + " AND " + LONGITUDE + ">=" + bounds.southwest.longitude
+                + " AND " + LATITUDE + "<=" + bounds.northeast.latitude
+                + " AND " + LONGITUDE + "<=" + bounds.northeast.longitude + ";";
 
         Cursor cursor = db.rawQuery(sql, null);
 
         ArrayList<Treasure> treasures = new ArrayList<>();
 
         while (cursor.moveToNext()) {
-            double latitude = cursor.getDouble(cursor.getColumnIndex("latitude"));
-            double longitude = cursor.getDouble(cursor.getColumnIndex("longitude"));
+            double latitude = cursor.getDouble(cursor.getColumnIndex(LATITUDE));
+            double longitude = cursor.getDouble(cursor.getColumnIndex(LONGITUDE));
 
             Treasure treasure = new Treasure(latitude, longitude);
             treasures.add(treasure);
@@ -105,26 +133,117 @@ public class DatabaseManager {
         return treasures;
     }
 
+    public String selectDate() {
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT * FROM " + DATE_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToFirst();
+        return cursor.getString(cursor.getColumnIndex(LAST_UPDATE_DATE));
+    }
+
+    public double[] selectDistance() {
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT * FROM " + DISTANCE_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToFirst();
+
+        double[] distances = new double[2];
+        distances[0] = cursor.getDouble(cursor.getColumnIndex(TODAY_DISTANCE));
+        distances[1] = cursor.getDouble(cursor.getColumnIndex(TOTAL_DISTANCE));
+
+        return distances;
+    }
+
+    public int selectNumTreasures() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "SELECT " + NUM_TREASURES + " FROM " + INVENTORY_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToFirst();
+
+        return cursor.getInt(cursor.getColumnIndex(NUM_TREASURES));
+    }
+
+    public int selectMoney() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "SELECT " + MONEY + " FROM " + INVENTORY_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+        cursor.moveToFirst();
+
+        return cursor.getInt(cursor.getColumnIndex(MONEY));
+    }
+
     public void deleteTreasure(double latitude, double longitude) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "DELETE FROM " + TREASURE_TABLE
-                + " WHERE latitude=" + latitude + "AND longitude=" + longitude + ";";
+                + " WHERE " + LATITUDE + "=" + latitude + " AND " + LONGITUDE + "=" + longitude + ";";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void reduceNumTreasures() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + INVENTORY_TABLE
+                + " SET " + NUM_TREASURES + "=" + NUM_TREASURES + "-1;";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void updateMoney(int money) {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + INVENTORY_TABLE + " SET " + MONEY + "=" + money + ";";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void initTodayDistance() {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + DISTANCE_TABLE + " SET "
+                + TODAY_DISTANCE + "=0;";
         db.execSQL(sql);
         db.close();
     }
 
     public void updateDate(String date) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "UPDATE " + DATE_TABLE + " SET last_update_date=" + date + ";";
+        String sql = "UPDATE " + DATE_TABLE + " SET " + LAST_UPDATE_DATE + "=" + date + ";";
         db.execSQL(sql);
         db.close();
     }
 
-    public String selectDate() {
+    public void updateDistance(double distance) {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + DISTANCE_TABLE + " SET "
+                + TODAY_DISTANCE + "=" + TODAY_DISTANCE + "+" + distance + ", "
+                + TOTAL_DISTANCE + "=" + TOTAL_DISTANCE + "+" + distance + ";";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public boolean dateExists() {
         SQLiteDatabase db = mDBHelper.getReadableDatabase();
-        String sql = "SELECT * FROM " + DATE_TABLE;
+        String sql = "SELECT * FROM " + DATE_TABLE + ";";
         Cursor cursor = db.rawQuery(sql, null);
-        return cursor.getString(cursor.getColumnIndex("last_update_date"));
+
+        if (cursor == null || cursor.getCount() <= 0) return false;
+        else return true;
+    }
+
+    public boolean distanceExists() {
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT * FROM " + DISTANCE_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+
+        if (cursor == null || cursor.getCount() <= 0) return false;
+        else return true;
+    }
+
+    public boolean inventoryExists() {
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT * FROM " + INVENTORY_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+
+        if (cursor == null || cursor.getCount() <= 0) return false;
+        else return true;
     }
 
     private class DatabaseHelper extends SQLiteOpenHelper {
@@ -137,21 +256,31 @@ public class DatabaseManager {
         @Override
         public void onCreate(SQLiteDatabase db) {
             String sql = "CREATE TABLE " + TREASURE_TABLE + " ("
-                    + "latitude REAL NOT NULL, "
-                    + "longitude REAL NOT NULL, "
-                    + "PRIMARY KEY(latitude, longitude)"
+                    + LATITUDE + " REAL NOT NULL, "
+                    + LONGITUDE + " REAL NOT NULL, "
+                    + "PRIMARY KEY(" + LATITUDE + ", " + LONGITUDE + ")"
                     + ");";
             db.execSQL(sql);
 
             sql = "CREATE TABLE " + DATE_TABLE + " ("
-                    + "last_update_date TEXT PRIMARY KEY);";
+                    + LAST_UPDATE_DATE + " TEXT PRIMARY KEY);";
+            db.execSQL(sql);
+
+            sql = "CREATE TABLE " + DISTANCE_TABLE + " ("
+                    + TODAY_DISTANCE + " REAL, "
+                    + TOTAL_DISTANCE + " REAL);";
             db.execSQL(sql);
 
             sql = "CREATE TABLE " + WALKING_TABLE + " ("
                     + WALKING_NAME + " TEXT NOT NULL, "
-                    + DISTANCE + " DOUBLE NOT NULL, "
+                    + DISTANCE + " REAL NOT NULL, "
                     + LINES + " TEXT NOT NULL, "
                     + DATES + "TEXT NOT NULL PRIMARY KEY);";
+            db.execSQL(sql);
+
+            sql = "CREATE TABLE " + INVENTORY_TABLE + " ("
+                    + NUM_TREASURES + " INTEGER, "
+                    + MONEY + " INTEGER);";
             db.execSQL(sql);
         }
 
