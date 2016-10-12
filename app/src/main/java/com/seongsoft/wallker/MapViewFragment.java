@@ -259,7 +259,10 @@ public class MapViewFragment extends Fragment implements
             endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
             ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
-            walkAllPath.addAll(path);
+            if(path == null) {
+                Toast.makeText(getContext(), "거리가 너무 짧습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }walkAllPath.addAll(path);
             totalDistance += mRoadTracker.getDistance();
             drawPath(path);
             startLatLng = endLatLng;
@@ -294,8 +297,9 @@ public class MapViewFragment extends Fragment implements
     public void walkStart(String name){
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
-        currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        currentDate = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
         startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
+        startLocationUpdates();
     }
 
     public void walkEnd(){
@@ -334,7 +338,7 @@ public class MapViewFragment extends Fragment implements
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-    private void startLocationUpdates() {
+    public void startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             // Permission to access the location is missing.
@@ -351,7 +355,7 @@ public class MapViewFragment extends Fragment implements
                 mGoogleApiClient, mLocationRequest, this);
     }
 
-    private void stopLocationUpdates() {
+    public void stopLocationUpdates() {
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 

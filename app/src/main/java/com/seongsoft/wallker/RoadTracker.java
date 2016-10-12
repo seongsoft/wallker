@@ -1,6 +1,7 @@
 package com.seongsoft.wallker;
 
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.maps.GeoApiContext;
@@ -82,8 +83,11 @@ public class RoadTracker {
                     int code = response.getStatusLine().getStatusCode();
                     String message = response.getStatusLine().getReasonPhrase();
                     Log.d(TAG, "run: " + message);
-                    String responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
-
+                    String responseString;
+                    if(response.getEntity() != null)
+                       responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
+                    else
+                        return;
                     String strData = "";
 
                     Log.d(TAG, "0\n");
