@@ -3,7 +3,6 @@ package com.seongsoft.wallker;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.location.Geocoder;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -18,9 +17,7 @@ import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -64,11 +61,9 @@ public class TreasureManager {
     }
 
     public void displayTreasure(LatLng latLng, GoogleMap map) {
-        BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
-
         map.addGroundOverlay(new GroundOverlayOptions()
                 .position(latLng, GROUNDOVERLAY_WIDTH)
-                .image(treasureBitmapDescriptor));
+                .image(getTreasureBitmapDescriptor()));
     }
 
     public ArrayList<Treasure> displayTreasure(LatLngBounds bounds, GoogleMap map) {
@@ -85,26 +80,6 @@ public class TreasureManager {
         }
 
         return (ArrayList<Treasure>) treasures;
-    }
-
-    private Bitmap resizeGroundOverlay(int id, int width, int height) {
-        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), id);
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
-
-        return resizedBitmap;
-    }
-
-    private void setLastUpdateDate() {
-        String lastUpdateDate = mDBManager.selectDate();
-        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-
-        if (lastUpdateDate == null) {
-            // 어플리케이션 다운로드 후 첫 생성 시
-            mDBManager.insertDate(currentDate);
-        } else if (!currentDate.equals(lastUpdateDate)) {
-            // 최근 업데이트 날짜가 오늘이 아닌 경우
-            mDBManager.updateDate(currentDate);
-        }
     }
 
     private LatLng findRoad(GeoApiContext context, com.google.maps.model.LatLng location) throws Exception {
@@ -168,8 +143,6 @@ public class TreasureManager {
                 Log.d("treasure", String.valueOf(index));
             }
 
-            setLastUpdateDate();
-
             return treasureLocations;
         }
 
@@ -192,7 +165,7 @@ public class TreasureManager {
     }
 
     private BitmapDescriptor getTreasureBitmapDescriptor() {
-        Bitmap treasureBitmap = resizeGroundOverlay(R.drawable.treasure, 50, 50);
+        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.flag, 50, 50);
         return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 

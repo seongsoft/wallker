@@ -2,11 +2,15 @@ package com.seongsoft.wallker;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -14,6 +18,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -26,6 +31,8 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -37,6 +44,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import static com.seongsoft.wallker.DistanceUtils.calDistance;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -50,6 +62,13 @@ public class MapViewFragment extends Fragment implements
 
     public static final float ZOOM = 18.0f;
 
+    private User mUser;
+
+    private String walk_name;
+    private String currentDate;
+    private List<com.google.android.gms.maps.model.LatLng> walkAllPath = new ArrayList<>();
+    private int totalDistance;
+
     private MapView mMapView;
     private GoogleMap mMap;
     private GoogleApiClient mGoogleApiClient;
@@ -57,20 +76,33 @@ public class MapViewFragment extends Fragment implements
     private TreasureManager mTreasureManager;
     private DatabaseManager mDBManager;
 
+    private UpdateTimeTask mUpdateTimeTask;
+    private Timer mUpdateTimeTimer;
+
+    private boolean mRequestingLocationUpdates;
     private Location mPrevLocation;
     private Location mCurrLocation;
-    private GeoApiContext mGeoContext;
     private Marker mCurrentMarker;
+    private double mMovedDistance;
+
+    private int mSeconds;
+    private int mMinutes;
+    private int mHours;
+
+    private GeoApiContext mGeoContext;
     private boolean walkState = false;
     private RoadTracker mRoadTracker;
-    private boolean mRequestingLocationUpdates;
     private ArrayList<LatLng> mCheckedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
-    private com.google.android.gms.maps.model.LatLng startLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
-    private com.google.android.gms.maps.model.LatLng endLatLng = new  com.google.android.gms.maps.model.LatLng(0, 0);
+    private LatLng startLatLng = new LatLng(0, 0);
+    private LatLng endLatLng = new LatLng(0, 0);
 
     private boolean mPermissionDenied;
     private boolean mCameraMoveStarted;
-    private double mMovedDistance = 100.0;
+    private boolean mFirstStart = true;
+
+    private TextView mTimeTV;
+    private TextView mDistanceTV;
+    private TextView mKcalTV;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -85,7 +117,10 @@ public class MapViewFragment extends Fragment implements
 
         mGeoContext = new GeoApiContext().setApiKey("");
 
+        mDBManager = new DatabaseManager(getContext());
         mTreasureManager = new TreasureManager(getContext(), mGeoContext);
+
+        mUser = new User(55);
     }
 
     @Nullable
@@ -118,6 +153,10 @@ public class MapViewFragment extends Fragment implements
             }
         });
 
+        mTimeTV = (TextView) v.findViewById(R.id.tv_time);
+        mDistanceTV = (TextView) v.findViewById(R.id.tv_distance);
+        mKcalTV = (TextView) v.findViewById(R.id.tv_kcal);
+
         return v;
     }
 
@@ -147,6 +186,7 @@ public class MapViewFragment extends Fragment implements
     public void onPause() {
         super.onPause();
         mMapView.onPause();
+
         stopLocationUpdates();
         mRequestingLocationUpdates = false;
     }
@@ -155,6 +195,7 @@ public class MapViewFragment extends Fragment implements
     public void onStop() {
         super.onStop();
         mGoogleApiClient.disconnect();
+
     }
 
     @Override
@@ -197,10 +238,11 @@ public class MapViewFragment extends Fragment implements
         final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
         if (mCameraMoveStarted) {
             if (mMap.getCameraPosition().zoom == ZOOM) {
-                if (mMovedDistance >= 100.0) {
+                if (mMovedDistance >= 100.0 || mFirstStart) {
                     mTreasureManager.createTreasure(bounds, mMap);
                     mCameraMoveStarted = false;
                     mMovedDistance = 0;
+                    mFirstStart = false;
                 }
 
                 List<Treasure> treasures
@@ -211,14 +253,10 @@ public class MapViewFragment extends Fragment implements
                         final double treasureLng = treasures.get(index).getLongitude();
                         // 보물 획득 확인
                         if (checkGetTreasure(treasureLat, treasureLng)) {
-                            GetTreasureDialogFragment.newInstance(new GetTreasureDialogFragment.GetTreasureDialogListener() {
-                                @Override
-                                public void onGet() {
-                                    new DatabaseManager(getContext())
-                                            .deleteTreasure(treasureLat, treasureLng);
-                                    mTreasureManager.displayTreasure(bounds, mMap);
-                                }
-                            }).show(getChildFragmentManager(), null);
+                            Snackbar.make(getView(), R.string.get_treasure, Snackbar.LENGTH_LONG)
+                                    .setAction(R.string.open, null).show();
+                            mDBManager.deleteTreasure(treasureLat, treasureLng);
+                            mTreasureManager.displayTreasure(bounds, mMap);
                         }
                     }
                 }
@@ -234,18 +272,30 @@ public class MapViewFragment extends Fragment implements
         Toast.makeText(getContext(), "Latitude: " + location.getLatitude()
                 + ", Longitude: " + location.getLongitude(), Toast.LENGTH_SHORT).show();
 
+        // 현재 위치와 이전 위치 저장
         if (mPrevLocation == null) mPrevLocation = location;
+        else mPrevLocation = mCurrLocation;
         mCurrLocation = location;
 
+        // 이동거리 계산 및 저장
         mMovedDistance += calDistance(mPrevLocation.getLatitude(), mPrevLocation.getLongitude(),
                 mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
 
+        // 이동거리 업데이트
+        if (!checkLastUpdateDateIsToday()) mDBManager.initTodayDistance();
+        if (mMovedDistance > 0) mDBManager.updateDistance(mMovedDistance);
+
+        // 이동거리 및 칼로리 디스플레이
+        double movedDistance = mDBManager.selectDistance()[0];
+        mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", movedDistance));
+        mKcalTV.setText(String.format(Locale.getDefault(), "%.2f",
+                DistanceUtils.calKcal(mUser.getWeight(), movedDistance / 1000)));
+
+        // 이전 마커 제거
         if (mCurrentMarker != null) mCurrentMarker.remove();
 
-        /* 현재 위치에 마커 생성 */
-        mCurrentMarker = mMap.addMarker(new MarkerOptions()
-                .position(new com.google.android.gms.maps.model.LatLng(
-                        location.getLatitude(), location.getLongitude())));
+        // 현재 위치에 마커 생성
+        mCurrentMarker = addMarker(location.getLatitude(), location.getLongitude());
 
         // 현재 위치로 시점 이동
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
@@ -279,29 +329,38 @@ public class MapViewFragment extends Fragment implements
         }
     }
 
-    public void changeWalkState(){
+    public void changeWalkState() {
         walkState = !walkState;
     }
 
-    public boolean isWalkOn(){
+    public boolean isWalkOn() {
         return walkState;
     }
 
-    public void walkStart(){
+    public void walkStart(String name) {
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
         currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
+        startLatLng = new LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
     }
 
-    public void walkEnd(){
-        Walking walk = new Walking(walk_name, totalDistance,walkAllPath, currentDate);
+    public void walkEnd() {
+        Walking walk = new Walking(walk_name, totalDistance,
+                (ArrayList<com.google.android.gms.maps.model.LatLng>) walkAllPath, currentDate);
+    }
+
+    private boolean checkLastUpdateDateIsToday() {
+        String lastUpdateDate = mDBManager.selectDate();
+        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+        if (lastUpdateDate.equals(currentDate)) return true;
+        else return false;
     }
 
     private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
         if (calDistance(
                 mCurrLocation.getLatitude(), mCurrLocation.getLongitude(),
-                treasureLat, treasureLng) <= 10.0) {
+                treasureLat, treasureLng) <= 5.0) {
             return true;
         }
 
@@ -330,22 +389,67 @@ public class MapViewFragment extends Fragment implements
         // Start location updates.
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
+
+        if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
+        if (mUpdateTimeTimer == null) {
+            mUpdateTimeTimer = new Timer();
+            mUpdateTimeTimer.schedule(mUpdateTimeTask, 0, 1000);
+        }
     }
 
     private void stopLocationUpdates() {
         LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
     }
 
-    private void drawPath(ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints){
+    private void drawPath(ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints) {
         com.google.android.gms.maps.model.LatLng[] pathPoints = new com.google.android.gms.maps.model.LatLng[mapPoints.size()];
         pathPoints = mapPoints.toArray(pathPoints);
         mMap.addPolyline(new PolylineOptions().add(pathPoints).color(Color.BLUE));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pathPoints[pathPoints.length - 1], 18));
     }
 
+    private Marker addMarker(double latitude, double longitude) {
+        return mMap.addMarker(new MarkerOptions()
+                .position(new com.google.android.gms.maps.model.LatLng(latitude, longitude))
+                .icon(getPersonBitmapDescriptor()));
+    }
+
     private void showMissingPermissionError() {
         PermissionUtils.PermissionDeniedDialog
                 .newInstance(true).show(getChildFragmentManager(), "dialog");
+    }
+
+    private BitmapDescriptor getPersonBitmapDescriptor() {
+        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(getContext(), R.drawable.person, 25, 50);
+        return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
+    }
+
+    private void setTime() {
+        mSeconds++;
+        if (mSeconds >= 60) {
+            mMinutes++;
+            mSeconds = 0;
+        }
+        if (mHours >= 60) {
+            mHours++;
+            mMinutes = 0;
+        }
+    }
+
+    private class UpdateTimeTask extends TimerTask {
+
+        @Override
+        public void run() {
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    setTime();
+                    mTimeTV.setText(String.format(
+                            Locale.getDefault(), "%02d : %02d : %02d", mHours, mMinutes, mSeconds));
+                }
+            });
+        }
+
     }
 
 }

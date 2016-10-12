@@ -1,6 +1,5 @@
 package com.seongsoft.wallker;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
@@ -10,11 +9,9 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
@@ -22,7 +19,11 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements
         NavigationView.OnNavigationItemSelectedListener {
-    private AlertDialog mDialog = null;
+
+    private DatabaseManager mDBManager;
+    private AlertDialog mDialog;
+
+    private boolean isMap = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,11 +43,34 @@ public class MainActivity extends AppCompatActivity implements
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
+        mDBManager = new DatabaseManager(this);
+
         final MapViewFragment mapViewFragment = new MapViewFragment();
+        final MyInfoFragment myInfoFragment = new MyInfoFragment();
+
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton switchFAB = (FloatingActionButton) findViewById(R.id.fab_switch);
+        switchFAB.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isMap) {
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, myInfoFragment)
+                            .commit();
+                } else {
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, mapViewFragment)
+                            .commit();
+                }
+                isMap = !isMap;
+            }
+        });
+
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_walking);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -75,7 +99,7 @@ public class MainActivity extends AppCompatActivity implements
 //                    });
 //                    AlertDialog dialog = builder.create();
 
-                    mapViewFragment.walkStart();
+                    mapViewFragment.walkStart("beinone");
                 }
                 else{
                     Toast.makeText(getApplicationContext(), "걸음 종료", Toast.LENGTH_SHORT).show();
@@ -84,6 +108,11 @@ public class MainActivity extends AppCompatActivity implements
                 mapViewFragment.changeWalkState();
             }
         });
+
+        setLastUpdateDate();
+
+        // distance 테이블에 레코드가 없을 때 이동거리가 0인 레코드를 하나 만들어줌.
+        if (!mDBManager.distanceExists()) mDBManager.insertDistance();
     }
 
     @Override
@@ -149,6 +178,18 @@ public class MainActivity extends AppCompatActivity implements
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void setLastUpdateDate() {
+        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+
+        if (mDBManager.dateExists()) {
+            String lastUpdateDate = mDBManager.selectDate();
+            // 최근 업데이트 날짜가 오늘이 아닌 경우
+            if (!currentDate.equals(lastUpdateDate)) mDBManager.updateDate(currentDate);
+        } else {
+            mDBManager.insertDate(currentDate);
+        }
     }
 
 }
