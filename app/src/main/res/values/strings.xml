@@ -3,7 +3,8 @@
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-
+    <string name="record">걸음 기록</string>
+    <string name="treasure">보물함</string>
     <string name="action_settings">Settings</string>
 
     <string name="get_flag">깃발 획득</string>

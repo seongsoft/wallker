@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.beans;
 
 import java.util.ArrayList;
 

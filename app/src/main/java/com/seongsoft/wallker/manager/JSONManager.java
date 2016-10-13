@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.manager;
 
 import org.json.JSONArray;
 import org.json.JSONException;

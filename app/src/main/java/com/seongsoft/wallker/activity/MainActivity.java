@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.activity;
 
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
@@ -14,6 +14,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.seongsoft.wallker.AddNameDialogFragment;
+import com.seongsoft.wallker.DatabaseManager;
+import com.seongsoft.wallker.MapViewFragment;
+import com.seongsoft.wallker.R;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -21,10 +26,10 @@ public class MainActivity extends AppCompatActivity implements
         NavigationView.OnNavigationItemSelectedListener {
 
     private DatabaseManager mDBManager;
-    private AlertDialog mDialog;
 
     private boolean isMap = true;
 
+    private AlertDialog mDialog = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements
         mDBManager = new DatabaseManager(this);
 
         final MapViewFragment mapViewFragment = new MapViewFragment();
-        final MyInfoFragment myInfoFragment = new MyInfoFragment();
 
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
@@ -75,10 +79,9 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public void onClick(View view) {
                 if(!mapViewFragment.isWalkOn()) {
-                    Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
 //                    LayoutInflater inflater = getLayoutInflater();
 //                    final View dialogView = inflater.inflate(R.layout.dialog_walking_name, null);
-//                    AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+//                    AlertDialog.Bilder builder = new AlertDialog.Builder(getApplicationContext());
 //                    builder.setTitle("걸음명");
 //                    builder.setView(dialogView);
 //                    builder.setPositiveButton("Complite", new DialogInterface.OnClickListener() {
@@ -98,14 +101,21 @@ public class MainActivity extends AppCompatActivity implements
 //                        }
 //                    });
 //                    AlertDialog dialog = builder.create();
-
-                    mapViewFragment.walkStart("beinone");
+                    mapViewFragment.stopLocationUpdates();
+                    AddNameDialogFragment dialog = AddNameDialogFragment.newInstance(new AddNameDialogFragment.NameInputListener() {
+                        @Override
+                        public void onNameInputComplete(String name) {
+                            mapViewFragment.walkStart(name);            //걸음 시작, 걸음 이름 넘겨줌
+                            mapViewFragment.changeWalkState();          //걸음 상태 true
+                            Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    dialog.show(getFragmentManager(), "addDialog");
                 }
                 else{
                     Toast.makeText(getApplicationContext(), "걸음 종료", Toast.LENGTH_SHORT).show();
-
+                    mapViewFragment.changeWalkState();
                 }
-                mapViewFragment.changeWalkState();
             }
         });
 
@@ -152,7 +162,6 @@ public class MainActivity extends AppCompatActivity implements
 //                    .commit();
 //            return false;
 //        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -162,17 +171,9 @@ public class MainActivity extends AppCompatActivity implements
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
+        if (id == R.id.nav_record) {
 
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
+        } else if(id == R.id.nav_treasure){
 
         }
 

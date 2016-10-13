@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.Utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;

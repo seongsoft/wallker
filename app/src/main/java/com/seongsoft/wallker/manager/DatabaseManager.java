@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.manager;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.seongsoft.wallker.Treasure;
+import com.seongsoft.wallker.Walking;
 
 import java.util.ArrayList;
 

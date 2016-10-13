@@ -1,4 +1,4 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.manager;
 
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -17,6 +17,9 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
+import com.seongsoft.wallker.R;
+import com.seongsoft.wallker.Treasure;
+import com.seongsoft.wallker.Utils.BitmapUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +83,7 @@ public class TreasureManager {
             flag.remove();
         }
 
-        mFlags.clear();
+        mFlags = new ArrayList<>();
 
         for (int index = 0; index < treasures.size(); index++) {
             mFlags.add(map.addGroundOverlay(new GroundOverlayOptions()
