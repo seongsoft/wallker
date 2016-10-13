@@ -6,7 +6,7 @@
 
     <string name="action_settings">Settings</string>
 
-    <string name="get_treasure">보물 획득</string>
+    <string name="get_flag">깃발 획득</string>
     <string name="open">열기</string>
 
     <string name="meter">m</string>

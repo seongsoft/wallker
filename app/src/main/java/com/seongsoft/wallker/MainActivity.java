@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity implements
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        deleteDatabase("wallker.db");
+//        deleteDatabase("wallker.db");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -51,24 +51,24 @@ public class MainActivity extends AppCompatActivity implements
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
 
-        FloatingActionButton switchFAB = (FloatingActionButton) findViewById(R.id.fab_switch);
-        switchFAB.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (isMap) {
-                    getSupportFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.container, myInfoFragment)
-                            .commit();
-                } else {
-                    getSupportFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.container, mapViewFragment)
-                            .commit();
-                }
-                isMap = !isMap;
-            }
-        });
+//        FloatingActionButton switchFAB = (FloatingActionButton) findViewById(R.id.fab_switch);
+//        switchFAB.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if (isMap) {
+//                    getSupportFragmentManager()
+//                            .beginTransaction()
+//                            .replace(R.id.container, myInfoFragment)
+//                            .commit();
+//                } else {
+//                    getSupportFragmentManager()
+//                            .beginTransaction()
+//                            .replace(R.id.container, mapViewFragment)
+//                            .commit();
+//                }
+//                isMap = !isMap;
+//            }
+//        });
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_walking);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity implements
 
         // distance 테이블에 레코드가 없을 때 이동거리가 0인 레코드를 하나 만들어줌.
         if (!mDBManager.distanceExists()) mDBManager.insertDistance();
+        if (!mDBManager.inventoryExists()) mDBManager.insertInventory();
     }
 
     @Override

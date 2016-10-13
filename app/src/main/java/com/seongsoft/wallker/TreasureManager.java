@@ -10,6 +10,7 @@ import android.util.Log;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
@@ -39,10 +40,13 @@ public class TreasureManager {
     private DatabaseManager mDBManager;
     private ProgressDialog mDialog;
 
+    private List<GroundOverlay> mFlags;
+
     public TreasureManager(Context context, GeoApiContext geoApiContext) {
         mContext = context;
         mGeoApiContext = geoApiContext;
         mDBManager = new DatabaseManager(context);
+        mFlags = new ArrayList<>();
     }
 
     public void createTreasure(LatLngBounds bounds, GoogleMap map) {
@@ -72,11 +76,17 @@ public class TreasureManager {
         DatabaseManager dbManager = new DatabaseManager(mContext);
         List<Treasure> treasures = dbManager.selectTreasure(bounds);
 
+        for (GroundOverlay flag : mFlags) {
+            flag.remove();
+        }
+
+        mFlags.clear();
+
         for (int index = 0; index < treasures.size(); index++) {
-            map.addGroundOverlay(new GroundOverlayOptions()
+            mFlags.add(map.addGroundOverlay(new GroundOverlayOptions()
                     .position(new LatLng(treasures.get(index).getLatitude(),
                             treasures.get(index).getLongitude()), GROUNDOVERLAY_WIDTH)
-                    .image(treasureBitmapDescriptor));
+                    .image(treasureBitmapDescriptor)));
         }
 
         return (ArrayList<Treasure>) treasures;
@@ -165,9 +175,8 @@ public class TreasureManager {
     }
 
     private BitmapDescriptor getTreasureBitmapDescriptor() {
-        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.flag, 50, 50);
+        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.ic_flag, 50, 50);
         return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 
 }
-

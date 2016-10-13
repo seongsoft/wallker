@@ -100,6 +100,8 @@ public class MapViewFragment extends Fragment implements
     private boolean mCameraMoveStarted;
     private boolean mFirstStart = true;
 
+    private TextView mNumFlagsTV;
+
     private TextView mTimeTV;
     private TextView mDistanceTV;
     private TextView mKcalTV;
@@ -152,6 +154,9 @@ public class MapViewFragment extends Fragment implements
 //                                37.2635727, 127.02860090000001), ZOOM));
             }
         });
+
+        mNumFlagsTV = (TextView) v.findViewById(R.id.tv_num_flag);
+        displayNumFlags();
 
         mTimeTV = (TextView) v.findViewById(R.id.tv_time);
         mDistanceTV = (TextView) v.findViewById(R.id.tv_distance);
@@ -240,7 +245,6 @@ public class MapViewFragment extends Fragment implements
             if (mMap.getCameraPosition().zoom == ZOOM) {
                 if (mMovedDistance >= 100.0 || mFirstStart) {
                     mTreasureManager.createTreasure(bounds, mMap);
-                    mCameraMoveStarted = false;
                     mMovedDistance = 0;
                     mFirstStart = false;
                 }
@@ -253,15 +257,17 @@ public class MapViewFragment extends Fragment implements
                         final double treasureLng = treasures.get(index).getLongitude();
                         // 보물 획득 확인
                         if (checkGetTreasure(treasureLat, treasureLng)) {
-                            Snackbar.make(getView(), R.string.get_treasure, Snackbar.LENGTH_LONG)
+                            Snackbar.make(getView(), R.string.get_flag, Snackbar.LENGTH_LONG)
                                     .setAction(R.string.open, null).show();
                             mDBManager.deleteTreasure(treasureLat, treasureLng);
+                            mDBManager.increaseNumFlags(1);
                             mTreasureManager.displayTreasure(bounds, mMap);
+                            displayNumFlags();
                         }
                     }
                 }
-
             }
+            mCameraMoveStarted = false;
         }
     }
 
@@ -349,6 +355,10 @@ public class MapViewFragment extends Fragment implements
                 (ArrayList<com.google.android.gms.maps.model.LatLng>) walkAllPath, currentDate);
     }
 
+    private void displayNumFlags() {
+        mNumFlagsTV.setText(String.valueOf(mDBManager.selectNumFlags()));
+    }
+
     private boolean checkLastUpdateDateIsToday() {
         String lastUpdateDate = mDBManager.selectDate();
         String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
@@ -360,7 +370,7 @@ public class MapViewFragment extends Fragment implements
     private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
         if (calDistance(
                 mCurrLocation.getLatitude(), mCurrLocation.getLongitude(),
-                treasureLat, treasureLng) <= 5.0) {
+                treasureLat, treasureLng) <= 10.0) {
             return true;
         }
 
@@ -420,7 +430,7 @@ public class MapViewFragment extends Fragment implements
     }
 
     private BitmapDescriptor getPersonBitmapDescriptor() {
-        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(getContext(), R.drawable.person, 25, 50);
+        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(getContext(), R.drawable.ic_person, 25, 50);
         return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 

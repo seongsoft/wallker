@@ -6,8 +6,7 @@ package com.seongsoft.wallker;
 
 public class DistanceUtils {
 
-    public static double calDistance(double lat1, double lon1, double lat2, double lon2){
-
+    public static double calDistance(double lat1, double lon1, double lat2, double lon2) {
         double theta, dist;
         theta = lon1 - lon2;
         dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1))

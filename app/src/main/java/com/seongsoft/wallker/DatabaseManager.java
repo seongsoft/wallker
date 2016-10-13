@@ -35,8 +35,7 @@ public class DatabaseManager {
     private static final String TOTAL_DISTANCE = "total_distance";
 
     private static final String INVENTORY_TABLE = "inventory";
-    private static final String NUM_TREASURES = "num_treasures";
-    private static final String MONEY = "money";
+    private static final String NUM_FLAGS = "num_flags";
 
     private DatabaseHelper mDBHelper;
 
@@ -85,7 +84,7 @@ public class DatabaseManager {
     public void insertInventory() {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "INSERT INTO " + INVENTORY_TABLE
-                + " VALUES (0, 0);";
+                + " VALUES (0);";
         db.execSQL(sql);
         db.close();
     }
@@ -154,22 +153,13 @@ public class DatabaseManager {
         return distances;
     }
 
-    public int selectNumTreasures() {
+    public int selectNumFlags() {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "SELECT " + NUM_TREASURES + " FROM " + INVENTORY_TABLE + ";";
+        String sql = "SELECT " + NUM_FLAGS + " FROM " + INVENTORY_TABLE + ";";
         Cursor cursor = db.rawQuery(sql, null);
         cursor.moveToFirst();
 
-        return cursor.getInt(cursor.getColumnIndex(NUM_TREASURES));
-    }
-
-    public int selectMoney() {
-        SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "SELECT " + MONEY + " FROM " + INVENTORY_TABLE + ";";
-        Cursor cursor = db.rawQuery(sql, null);
-        cursor.moveToFirst();
-
-        return cursor.getInt(cursor.getColumnIndex(MONEY));
+        return cursor.getInt(cursor.getColumnIndex(NUM_FLAGS));
     }
 
     public void deleteTreasure(double latitude, double longitude) {
@@ -180,25 +170,25 @@ public class DatabaseManager {
         db.close();
     }
 
-    public void reduceNumTreasures() {
+    public void reduceNumFlags(int numFlags) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "UPDATE " + INVENTORY_TABLE
-                + " SET " + NUM_TREASURES + "=" + NUM_TREASURES + "-1;";
-        db.execSQL(sql);
-        db.close();
-    }
-
-    public void updateMoney(int money) {
-        SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "UPDATE " + INVENTORY_TABLE + " SET " + MONEY + "=" + money + ";";
+                + " SET " + NUM_FLAGS + "=" + NUM_FLAGS + "-" + numFlags + ";";
         db.execSQL(sql);
         db.close();
     }
 
     public void initTodayDistance() {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "UPDATE " + DISTANCE_TABLE + " SET "
-                + TODAY_DISTANCE + "=0;";
+        String sql = "UPDATE " + DISTANCE_TABLE + " SET " + TODAY_DISTANCE + "=0;";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void increaseNumFlags(int numFlags) {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + INVENTORY_TABLE
+                + " SET " + NUM_FLAGS + "=" + NUM_FLAGS + "+" + numFlags + ";";
         db.execSQL(sql);
         db.close();
     }
@@ -279,8 +269,7 @@ public class DatabaseManager {
             db.execSQL(sql);
 
             sql = "CREATE TABLE " + INVENTORY_TABLE + " ("
-                    + NUM_TREASURES + " INTEGER, "
-                    + MONEY + " INTEGER);";
+                    + NUM_FLAGS + " INTEGER);";
             db.execSQL(sql);
         }
 
