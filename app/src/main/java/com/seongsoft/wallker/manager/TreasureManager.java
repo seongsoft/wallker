@@ -18,7 +18,7 @@ import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 import com.seongsoft.wallker.R;
-import com.seongsoft.wallker.Treasure;
+import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.Utils.BitmapUtils;
 
 import java.util.ArrayList;
@@ -68,9 +68,9 @@ public class TreasureManager {
     }
 
     public void displayTreasure(LatLng latLng, GoogleMap map) {
-        map.addGroundOverlay(new GroundOverlayOptions()
+        mFlags.add(map.addGroundOverlay(new GroundOverlayOptions()
                 .position(latLng, GROUNDOVERLAY_WIDTH)
-                .image(getTreasureBitmapDescriptor()));
+                .image(getTreasureBitmapDescriptor())));
     }
 
     public ArrayList<Treasure> displayTreasure(LatLngBounds bounds, GoogleMap map) {

@@ -14,9 +14,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import com.seongsoft.wallker.AddNameDialogFragment;
-import com.seongsoft.wallker.DatabaseManager;
-import com.seongsoft.wallker.MapViewFragment;
+import com.seongsoft.wallker.dialog.AddNameDialogFragment;
+import com.seongsoft.wallker.manager.DatabaseManager;
+import com.seongsoft.wallker.fragment.MapViewFragment;
 import com.seongsoft.wallker.R;
 
 import java.text.SimpleDateFormat;
@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements
 //            }
 //        });
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_walking);
+        final FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_walking);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -107,6 +107,7 @@ public class MainActivity extends AppCompatActivity implements
                         public void onNameInputComplete(String name) {
                             mapViewFragment.walkStart(name);            //걸음 시작, 걸음 이름 넘겨줌
                             mapViewFragment.changeWalkState();          //걸음 상태 true
+                            fab.setImageResource(R.drawable.ic_stop);
                             Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
                         }
                     });
@@ -115,6 +116,8 @@ public class MainActivity extends AppCompatActivity implements
                 else{
                     Toast.makeText(getApplicationContext(), "걸음 종료", Toast.LENGTH_SHORT).show();
                     mapViewFragment.changeWalkState();
+                    mapViewFragment.walkEnd();
+                    fab.setImageResource(R.drawable.ic_play);
                 }
             }
         });

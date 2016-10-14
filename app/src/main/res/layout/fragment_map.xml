@@ -13,10 +13,10 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
-        android:layout_marginTop="96dp">
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="96dp"
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -25,41 +25,45 @@
             android:orientation="vertical">
 
             <android.support.v7.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:cardBackgroundColor="@android:color/black">
-
-            <LinearLayout
-                android:id="@+id/layout_num_flag"
+                android:id="@+id/cv_num_flags"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:padding="4dp">
+                android:layout_marginBottom="2dp"
+                app:cardBackgroundColor="@android:color/black">
 
-                <ImageView
-                    android:id="@+id/iv_num_flag"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginRight="2dp"
-                    android:layout_marginEnd="2dp"
-                    android:scaleType="fitCenter"
-                    android:layout_gravity="center_horizontal"
-                    android:src="@drawable/ic_flag_white" />
+                <LinearLayout
+                    android:id="@+id/layout_num_flags"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="4dp">
 
-                <TextView
-                    android:id="@+id/tv_num_flag"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:textColor="@android:color/white" />
+                    <ImageView
+                        android:id="@+id/iv_num_flags"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginEnd="2dp"
+                        android:layout_marginRight="2dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_flag_white" />
 
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/tv_num_flags"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:textColor="@android:color/white" />
 
-        </android.support.v7.widget.CardView>
+                </LinearLayout>
+
+            </android.support.v7.widget.CardView>
 
             <android.support.v7.widget.CardView
+                android:id="@+id/cv_time"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_marginBottom="2dp"
                 app:cardBackgroundColor="@android:color/holo_red_light">
 
                 <LinearLayout
@@ -88,8 +92,10 @@
             </android.support.v7.widget.CardView>
 
             <android.support.v7.widget.CardView
+                android:id="@+id/cv_distance"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:layout_marginBottom="2dp"
                 app:cardBackgroundColor="@android:color/holo_blue_dark">
 
                 <LinearLayout
@@ -122,7 +128,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginLeft="2dp"
                             android:layout_marginStart="2dp"
-                            android:text="@string/meter"
+                            android:text="@string/kilometer"
                             android:textColor="@android:color/white" />
 
                     </LinearLayout>
@@ -132,6 +138,7 @@
             </android.support.v7.widget.CardView>
 
             <android.support.v7.widget.CardView
+                android:id="@+id/cv_kcal"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 app:cardBackgroundColor="@android:color/holo_green_dark">
@@ -148,7 +155,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
-                        android:src="@drawable/ic_kcal" />
+                        android:src="@drawable/ic_walk_white" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"

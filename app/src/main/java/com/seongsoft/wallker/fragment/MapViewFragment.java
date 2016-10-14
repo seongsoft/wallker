@@ -14,6 +14,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.CardView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,16 +40,16 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.LatLng;
-import com.seongsoft.wallker.BitmapUtils;
-import com.seongsoft.wallker.DatabaseManager;
-import com.seongsoft.wallker.DistanceUtils;
-import com.seongsoft.wallker.PermissionUtils;
 import com.seongsoft.wallker.R;
-import com.seongsoft.wallker.RoadTracker;
-import com.seongsoft.wallker.Treasure;
-import com.seongsoft.wallker.TreasureManager;
-import com.seongsoft.wallker.User;
-import com.seongsoft.wallker.Walking;
+import com.seongsoft.wallker.Utils.BitmapUtils;
+import com.seongsoft.wallker.Utils.DistanceUtils;
+import com.seongsoft.wallker.Utils.PermissionUtils;
+import com.seongsoft.wallker.Utils.RoadTracker;
+import com.seongsoft.wallker.beans.Treasure;
+import com.seongsoft.wallker.beans.User;
+import com.seongsoft.wallker.beans.Walking;
+import com.seongsoft.wallker.manager.DatabaseManager;
+import com.seongsoft.wallker.manager.TreasureManager;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -58,7 +59,7 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static com.seongsoft.wallker.DistanceUtils.calDistance;
+import static com.seongsoft.wallker.Utils.DistanceUtils.calDistance;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -90,10 +91,11 @@ public class MapViewFragment extends Fragment implements
     private Timer mUpdateTimeTimer;
 
     private boolean mRequestingLocationUpdates;
-    private Location mPrevLocation;
-    private Location mCurrLocation;
+    private LatLng mPrevLatLng;
+    private LatLng mCurrLatLng;
     private Marker mCurrentMarker;
-    private double mMovedDistance;
+    private double mCheckingDistance;      // 단위는 km
+    private double mTotalDistance;
 
     private int mSeconds;
     private int mMinutes;
@@ -110,8 +112,12 @@ public class MapViewFragment extends Fragment implements
     private boolean mCameraMoveStarted;
     private boolean mFirstStart = true;
 
-    private TextView mNumFlagsTV;
+    private CardView mNumFlagsCV;
+    private CardView mTimeCV;
+    private CardView mDistanceCV;
+    private CardView mKcalCV;
 
+    private TextView mNumFlagsTV;
     private TextView mTimeTV;
     private TextView mDistanceTV;
     private TextView mKcalTV;
@@ -165,7 +171,20 @@ public class MapViewFragment extends Fragment implements
             }
         });
 
-        mNumFlagsTV = (TextView) v.findViewById(R.id.tv_num_flag);
+        mNumFlagsCV = (CardView) v.findViewById(R.id.cv_num_flags);
+        mNumFlagsCV.setAlpha(0.5f);
+        mNumFlagsCV.setVisibility(View.INVISIBLE);
+        mTimeCV = (CardView) v.findViewById(R.id.cv_time);
+        mTimeCV.setAlpha(0.5f);
+        mTimeCV.setVisibility(View.INVISIBLE);
+        mDistanceCV = (CardView) v.findViewById(R.id.cv_distance);
+        mDistanceCV.setAlpha(0.5f);
+        mDistanceCV.setVisibility(View.INVISIBLE);
+        mKcalCV = (CardView) v.findViewById(R.id.cv_kcal);
+        mKcalCV.setAlpha(0.5f);
+        mKcalCV.setVisibility(View.INVISIBLE);
+
+        mNumFlagsTV = (TextView) v.findViewById(R.id.tv_num_flags);
         displayNumFlags();
 
         mTimeTV = (TextView) v.findViewById(R.id.tv_time);
@@ -250,34 +269,35 @@ public class MapViewFragment extends Fragment implements
 
     @Override
     public void onCameraIdle() {
-        final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
-        if (mCameraMoveStarted) {
-            if (mMap.getCameraPosition().zoom == ZOOM) {
-                if (mMovedDistance >= 100.0 || mFirstStart) {
-                    mTreasureManager.createTreasure(bounds, mMap);
-                    mMovedDistance = 0;
-                    mFirstStart = false;
-                }
+        if (walkState) {
+            final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
+            if (mCameraMoveStarted) {
+                if (mMap.getCameraPosition().zoom == ZOOM) {
+                    if (mCheckingDistance >= 0.1 || mFirstStart) {
+                        mTreasureManager.createTreasure(bounds, mMap);
+                        mCheckingDistance = 0;
+                        mFirstStart = false;
+                    }
 
-                List<Treasure> treasures
-                        = mTreasureManager.displayTreasure(bounds, mMap);
-                if (treasures != null) {
-                    for (int index = 0; index < treasures.size(); index++) {
-                        final double treasureLat = treasures.get(index).getLatitude();
-                        final double treasureLng = treasures.get(index).getLongitude();
-                        // 보물 획득 확인
-                        if (checkGetTreasure(treasureLat, treasureLng)) {
-                            Snackbar.make(getView(), R.string.get_flag, Snackbar.LENGTH_LONG)
-                                    .setAction(R.string.open, null).show();
-                            mDBManager.deleteTreasure(treasureLat, treasureLng);
-                            mDBManager.increaseNumFlags(1);
-                            mTreasureManager.displayTreasure(bounds, mMap);
-                            displayNumFlags();
+                    List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
+                    if (treasures != null) {
+                        for (int index = 0; index < treasures.size(); index++) {
+                            final double treasureLat = treasures.get(index).getLatitude();
+                            final double treasureLng = treasures.get(index).getLongitude();
+                            // 보물 획득 확인
+                            if (checkGetTreasure(treasureLat, treasureLng)) {
+                                Snackbar.make(getView(), R.string.get_flag, Snackbar.LENGTH_LONG)
+                                        .setAction(R.string.open, null).show();
+                                mDBManager.deleteTreasure(treasureLat, treasureLng);
+                                mDBManager.increaseNumFlags(1);
+                                mTreasureManager.displayTreasure(bounds, mMap);
+                                displayNumFlags();
+                            }
                         }
                     }
                 }
+                mCameraMoveStarted = false;
             }
-            mCameraMoveStarted = false;
         }
     }
 
@@ -289,24 +309,50 @@ public class MapViewFragment extends Fragment implements
 //                + ", Longitude: " + location.getLongitude(), Toast.LENGTH_SHORT).show();
 
         // 현재 위치와 이전 위치 저장
-        if (mPrevLocation == null) mPrevLocation = location;
-        else mPrevLocation = mCurrLocation;
-        mCurrLocation = location;
+        if (mPrevLatLng == null) {
+            mPrevLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mCurrLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+        } else {
+            mPrevLatLng.lat = mCurrLatLng.lat;
+            mPrevLatLng.lng = mCurrLatLng.lng;
+            mCurrLatLng.lat = location.getLatitude();
+            mCurrLatLng.lng = location.getLongitude();
+        }
 
-        // 이동거리 계산 및 저장
-        double movedDistance = calDistance(mPrevLocation.getLatitude(), mPrevLocation.getLongitude(),
-                mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
-        mMovedDistance += movedDistance;
+        Log.d("mylocation", "prev:" + mPrevLatLng.lat + ", " + mPrevLatLng.lng
+                + "  curr:" + mCurrLatLng.lat + ", " + mCurrLatLng.lng);
 
-        // 이동거리 업데이트
-        if (!checkLastUpdateDateIsToday()) mDBManager.initTodayDistance();
-        if (movedDistance > 0) mDBManager.updateDistance(movedDistance);
+        if (walkState) {
+            if (mPrevLatLng.lat != mCurrLatLng.lat && mPrevLatLng.lng != mCurrLatLng.lng) {
+                double movedDistance = calDistance(mPrevLatLng.lat, mPrevLatLng.lng,
+                        mCurrLatLng.lat, mCurrLatLng.lng);
+                mTotalDistance += movedDistance;
+                mCheckingDistance += movedDistance;
 
-        // 이동거리 및 칼로리 디스플레이
-        double sMovedDistance = mDBManager.selectDistance()[0];
-        mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", sMovedDistance));
-        mKcalTV.setText(String.format(Locale.getDefault(), "%.2f",
-                DistanceUtils.calKcal(mUser.getWeight(), sMovedDistance / 1000)));
+                // 이동거리 업데이트
+                if (!checkLastUpdateDateIsToday()) mDBManager.initTodayDistance();
+                if (movedDistance > 0) mDBManager.updateDistance(movedDistance);
+
+                Log.d("distance", String.valueOf(movedDistance));
+            }
+
+            // 이동거리 및 칼로리 디스플레이
+            mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", mTotalDistance));
+            mKcalTV.setText(String.format(Locale.getDefault(), "%.2f",
+                    DistanceUtils.calKcal(mUser.getWeight(), mTotalDistance)));
+
+            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
+            ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
+            if (path == null) {
+                Toast.makeText(getContext(), "거리가 너무 짧습니다", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            walkAllPath.addAll(path);
+            totalDistance += mRoadTracker.getDistance();
+            drawPath(path);
+            startLatLng = endLatLng;
+        }
 
         // 이전 마커 제거
         if (mCurrentMarker != null) mCurrentMarker.remove();
@@ -316,20 +362,8 @@ public class MapViewFragment extends Fragment implements
 
         // 현재 위치로 시점 이동
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                new com.google.android.gms.maps.model.LatLng(location.getLatitude(), location.getLongitude()), ZOOM));
-
-        if (walkState) {
-            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-            mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
-            ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
-            if(path == null) {
-                Toast.makeText(getContext(), "거리가 너무 짧습니다", Toast.LENGTH_SHORT).show();
-                return;
-            }walkAllPath.addAll(path);
-            totalDistance += mRoadTracker.getDistance();
-            drawPath(path);
-            startLatLng = endLatLng;
-        }
+                new com.google.android.gms.maps.model.LatLng(location.getLatitude(),
+                        location.getLongitude()), ZOOM));
     }
 
     @Override
@@ -360,16 +394,45 @@ public class MapViewFragment extends Fragment implements
     public void walkStart(String name) {
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
-                currentDate = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
-        startLatLng = new  LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
+        currentDate = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+        startLatLng = new LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
+
+        if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
+        if (mUpdateTimeTimer == null) {
+            mUpdateTimeTimer = new Timer();
+            mUpdateTimeTimer.schedule(mUpdateTimeTask, 0, 1000);
+        }
+
+        mNumFlagsCV.setVisibility(View.VISIBLE);
+        mTimeCV.setVisibility(View.VISIBLE);
+        mDistanceCV.setVisibility(View.VISIBLE);
+        mKcalCV.setVisibility(View.VISIBLE);
+
         startLocationUpdates();
-        currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-        startLatLng = new LatLng(mCurrLocation.getLatitude(), mCurrLocation.getLongitude());
     }
 
     public void walkEnd() {
         Walking walk = new Walking(walk_name, totalDistance,
                 (ArrayList<com.google.android.gms.maps.model.LatLng>) walkAllPath, currentDate);
+        mMap.clear();
+
+        mUpdateTimeTimer.cancel();
+        mUpdateTimeTimer = null;
+        mUpdateTimeTask.cancel();
+        mUpdateTimeTask = null;
+
+        mHours = 0;
+        mMinutes = 0;
+        mSeconds = 0;
+
+        mNumFlagsCV.setVisibility(View.INVISIBLE);
+        mTimeCV.setVisibility(View.INVISIBLE);
+        mDistanceCV.setVisibility(View.INVISIBLE);
+        mKcalCV.setVisibility(View.INVISIBLE);
+
+        mTimeTV.setText(null);
+        mDistanceTV.setText(null);
+        mKcalTV.setText(null);
     }
 
     private void displayNumFlags() {
@@ -385,9 +448,7 @@ public class MapViewFragment extends Fragment implements
     }
 
     private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
-        if (calDistance(
-                mCurrLocation.getLatitude(), mCurrLocation.getLongitude(),
-                treasureLat, treasureLng) <= 10.0) {
+        if (calDistance(mCurrLatLng.lat, mCurrLatLng.lng, treasureLat, treasureLng) <= 0.01) {
             return true;
         }
 
@@ -411,17 +472,15 @@ public class MapViewFragment extends Fragment implements
                     true);
         }
 
-        mCurrLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
         // Start location updates.
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, mLocationRequest, this);
 
-        if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
-        if (mUpdateTimeTimer == null) {
-            mUpdateTimeTimer = new Timer();
-            mUpdateTimeTimer.schedule(mUpdateTimeTask, 0, 1000);
-        }
+//        if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
+//        if (mUpdateTimeTimer == null) {
+//            mUpdateTimeTimer = new Timer();
+//            mUpdateTimeTimer.schedule(mUpdateTimeTask, 0, 1000);
+//        }
     }
 
     public void stopLocationUpdates() {
