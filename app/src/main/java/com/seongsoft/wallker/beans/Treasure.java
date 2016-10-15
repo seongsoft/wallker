@@ -1,10 +1,10 @@
-package com.seongsoft.wallker;
-
-/**
- * Created by BeINone on 2016-09-16.
- */
+package com.seongsoft.wallker.beans;
 public class Treasure {
 
+
+    /**
+     * Created by BeINone on 2016-09-16.
+     */
     private double latitude;
     private double longitude;
 
@@ -28,5 +28,4 @@ public class Treasure {
     public void setLongitude(double longitude) {
         this.longitude = longitude;
     }
-
 }

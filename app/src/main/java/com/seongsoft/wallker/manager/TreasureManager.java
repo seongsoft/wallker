@@ -1,9 +1,8 @@
-package com.seongsoft.wallker;
+package com.seongsoft.wallker.manager;
 
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.location.Geocoder;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -11,15 +10,18 @@ import android.util.Log;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.GroundOverlay;
 import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
+import com.seongsoft.wallker.R;
+import com.seongsoft.wallker.beans.Treasure;
+import com.seongsoft.wallker.Utils.BitmapUtils;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -41,10 +43,13 @@ public class TreasureManager {
     private DatabaseManager mDBManager;
     private ProgressDialog mDialog;
 
+    private List<GroundOverlay> mFlags;
+
     public TreasureManager(Context context, GeoApiContext geoApiContext) {
         mContext = context;
         mGeoApiContext = geoApiContext;
         mDBManager = new DatabaseManager(context);
+        mFlags = new ArrayList<>();
     }
 
     public void createTreasure(LatLngBounds bounds, GoogleMap map) {
@@ -63,45 +68,31 @@ public class TreasureManager {
     }
 
     public void displayTreasure(LatLng latLng, GoogleMap map) {
-        BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
-
-        map.addGroundOverlay(new GroundOverlayOptions()
+        mFlags.add(map.addGroundOverlay(new GroundOverlayOptions()
                 .position(latLng, GROUNDOVERLAY_WIDTH)
-                .image(treasureBitmapDescriptor));
+                .image(getTreasureBitmapDescriptor())));
     }
 
-    public void displayTreasure(LatLngBounds bounds, GoogleMap map) {
+    public ArrayList<Treasure> displayTreasure(LatLngBounds bounds, GoogleMap map) {
         BitmapDescriptor treasureBitmapDescriptor = getTreasureBitmapDescriptor();
 
         DatabaseManager dbManager = new DatabaseManager(mContext);
         List<Treasure> treasures = dbManager.selectTreasure(bounds);
 
+        for (GroundOverlay flag : mFlags) {
+            flag.remove();
+        }
+
+        mFlags = new ArrayList<>();
+
         for (int index = 0; index < treasures.size(); index++) {
-            map.addGroundOverlay(new GroundOverlayOptions()
+            mFlags.add(map.addGroundOverlay(new GroundOverlayOptions()
                     .position(new LatLng(treasures.get(index).getLatitude(),
                             treasures.get(index).getLongitude()), GROUNDOVERLAY_WIDTH)
-                    .image(treasureBitmapDescriptor));
+                    .image(treasureBitmapDescriptor)));
         }
-    }
 
-    private Bitmap resizeGroundOverlay(int id, int width, int height) {
-        Bitmap bitmap = BitmapFactory.decodeResource(mContext.getResources(), id);
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, false);
-
-        return resizedBitmap;
-    }
-
-    private void setLastUpdateDate() {
-        String lastUpdateDate = mDBManager.selectDate();
-        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
-
-        if (lastUpdateDate == null) {
-            // 어플리케이션 다운로드 후 첫 생성 시
-            mDBManager.insertDate(currentDate);
-        } else if (!currentDate.equals(lastUpdateDate)) {
-            // 최근 업데이트 날짜가 오늘이 아닌 경우
-            mDBManager.updateDate(currentDate);
-        }
+        return (ArrayList<Treasure>) treasures;
     }
 
     private LatLng findRoad(GeoApiContext context, com.google.maps.model.LatLng location) throws Exception {
@@ -165,8 +156,6 @@ public class TreasureManager {
                 Log.d("treasure", String.valueOf(index));
             }
 
-            setLastUpdateDate();
-
             return treasureLocations;
         }
 
@@ -189,9 +178,8 @@ public class TreasureManager {
     }
 
     private BitmapDescriptor getTreasureBitmapDescriptor() {
-        Bitmap treasureBitmap = resizeGroundOverlay(R.drawable.treasure, 50, 50);
+        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.ic_flag, 50, 50);
         return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 
 }
-
