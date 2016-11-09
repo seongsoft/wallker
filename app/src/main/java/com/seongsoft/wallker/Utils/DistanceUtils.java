@@ -31,8 +31,5 @@ public class DistanceUtils {
         return (double)(rad * (double)180d / Math.PI);
     }
 
-    public static double calKcal(double weight, double distance) {
-        return weight * distance;
-    }
 
 }

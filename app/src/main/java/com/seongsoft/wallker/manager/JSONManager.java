@@ -31,10 +31,11 @@ public class JSONManager {
         ArrayList<com.google.android.gms.maps.model.LatLng> list = new ArrayList<>();
         try{
             JSONArray jsonArray = new JSONArray(data);
-            for(int i = 0; i < jsonArray.length(); i++){
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
+            for(int i = 0; i < jsonArray.length(); i+=2){
+                JSONObject latObject = jsonArray.getJSONObject(i);
+                JSONObject lngObject = jsonArray.getJSONObject(i + 1);
                 com.google.android.gms.maps.model.LatLng latLng =
-                        new com.google.android.gms.maps.model.LatLng(Double.parseDouble(jsonObject.get("lat").toString()), Double.parseDouble(jsonObject.get("lat").toString()));
+                        new com.google.android.gms.maps.model.LatLng(Double.parseDouble(latObject.get("lat").toString()), Double.parseDouble(lngObject.get("lng").toString()));
                 list.add(latLng);
             }
         }catch (JSONException e){

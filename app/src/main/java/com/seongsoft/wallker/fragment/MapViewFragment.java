@@ -1,16 +1,20 @@
 package com.seongsoft.wallker.fragment;
 
 import android.Manifest;
+
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -58,12 +62,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutionException;
 
 import static com.seongsoft.wallker.Utils.DistanceUtils.calDistance;
 
 /**
  * Created by BeINone on 2016-09-08.
  */
+
 public class MapViewFragment extends Fragment implements
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
@@ -115,12 +121,14 @@ public class MapViewFragment extends Fragment implements
     private CardView mNumFlagsCV;
     private CardView mTimeCV;
     private CardView mDistanceCV;
-    private CardView mKcalCV;
+    private CardView mStepCV;
 
     private TextView mNumFlagsTV;
     private TextView mTimeTV;
     private TextView mDistanceTV;
-    private TextView mKcalTV;
+    private TextView mStepTV;
+
+    private Context mContext;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -133,8 +141,6 @@ public class MapViewFragment extends Fragment implements
                 .build();
         createLocationRequest();
 
-        mGeoContext = new GeoApiContext().setApiKey("");
-
         mDBManager = new DatabaseManager(getContext());
         mTreasureManager = new TreasureManager(getContext(), mGeoContext);
 
@@ -146,6 +152,7 @@ public class MapViewFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_map, container, false);
 
+        mContext = v.getContext();
         mMapView = (MapView) v.findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
 
@@ -155,6 +162,7 @@ public class MapViewFragment extends Fragment implements
             MapsInitializer.initialize(getContext());
         } catch (Exception e) {
             e.printStackTrace();
+            return v;
         }
 
         mMapView.getMapAsync(new OnMapReadyCallback() {
@@ -180,16 +188,16 @@ public class MapViewFragment extends Fragment implements
         mDistanceCV = (CardView) v.findViewById(R.id.cv_distance);
         mDistanceCV.setAlpha(0.5f);
         mDistanceCV.setVisibility(View.INVISIBLE);
-        mKcalCV = (CardView) v.findViewById(R.id.cv_kcal);
-        mKcalCV.setAlpha(0.5f);
-        mKcalCV.setVisibility(View.INVISIBLE);
+        mStepCV = (CardView) v.findViewById(R.id.cv_step);
+        mStepCV.setAlpha(0.5f);
+        mStepCV.setVisibility(View.INVISIBLE);
 
         mNumFlagsTV = (TextView) v.findViewById(R.id.tv_num_flags);
         displayNumFlags();
 
         mTimeTV = (TextView) v.findViewById(R.id.tv_time);
         mDistanceTV = (TextView) v.findViewById(R.id.tv_distance);
-        mKcalTV = (TextView) v.findViewById(R.id.tv_kcal);
+        mStepTV = (TextView) v.findViewById(R.id.tv_step);
 
         return v;
     }
@@ -338,8 +346,7 @@ public class MapViewFragment extends Fragment implements
 
             // 이동거리 및 칼로리 디스플레이
             mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", mTotalDistance));
-            mKcalTV.setText(String.format(Locale.getDefault(), "%.2f",
-                    DistanceUtils.calKcal(mUser.getWeight(), mTotalDistance)));
+            mStepTV.setText("Not Yet");
 
             endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
@@ -352,18 +359,27 @@ public class MapViewFragment extends Fragment implements
             totalDistance += mRoadTracker.getDistance();
             drawPath(path);
             startLatLng = endLatLng;
+
+            if (mCurrentMarker != null) mCurrentMarker.remove();
+
+            mCurrentMarker = addMarker(path.get(path.size() - 1).latitude, path.get(path.size() - 1).longitude);
+
+        } else {
+            if (mCurrentMarker != null) mCurrentMarker.remove();
+            mCurrentMarker = addMarker(location.getLatitude(), location.getLongitude());
+
         }
-
-        // 이전 마커 제거
-        if (mCurrentMarker != null) mCurrentMarker.remove();
-
-        // 현재 위치에 마커 생성
-        mCurrentMarker = addMarker(location.getLatitude(), location.getLongitude());
-
-        // 현재 위치로 시점 이동
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                 new com.google.android.gms.maps.model.LatLng(location.getLatitude(),
                         location.getLongitude()), ZOOM));
+
+
+        // 이전 마커 제거
+
+        // 현재 위치에 마커 생성
+
+        // 현재 위치로 시점 이동
+
     }
 
     @Override
@@ -394,7 +410,7 @@ public class MapViewFragment extends Fragment implements
     public void walkStart(String name) {
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
-        currentDate = new SimpleDateFormat("yyyyMMddHHmm").format(new Date());
+        currentDate = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date());
         startLatLng = new LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
 
         if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
@@ -406,20 +422,28 @@ public class MapViewFragment extends Fragment implements
         mNumFlagsCV.setVisibility(View.VISIBLE);
         mTimeCV.setVisibility(View.VISIBLE);
         mDistanceCV.setVisibility(View.VISIBLE);
-        mKcalCV.setVisibility(View.VISIBLE);
+        mStepCV.setVisibility(View.VISIBLE);
 
         startLocationUpdates();
     }
 
     public void walkEnd() {
-        Walking walk = new Walking(walk_name, totalDistance,
-                (ArrayList<com.google.android.gms.maps.model.LatLng>) walkAllPath, currentDate);
-        mMap.clear();
+        int step = 0;
 
-        mUpdateTimeTimer.cancel();
         mUpdateTimeTimer = null;
         mUpdateTimeTask.cancel();
         mUpdateTimeTask = null;
+
+        int time = mHours * 3600 + mMinutes * 60 + mSeconds;
+        double speedAver = totalDistance * 3600 / time;
+
+        Walking walk = new Walking(walk_name, totalDistance,
+                (ArrayList<com.google.android.gms.maps.model.LatLng>) walkAllPath,
+                currentDate, time, Integer.parseInt(mNumFlagsTV.getText().toString()),
+                speedAver, step);
+        mDBManager.insertWalking(walk);
+        mMap.clear();
+
 
         mHours = 0;
         mMinutes = 0;
@@ -428,11 +452,12 @@ public class MapViewFragment extends Fragment implements
         mNumFlagsCV.setVisibility(View.INVISIBLE);
         mTimeCV.setVisibility(View.INVISIBLE);
         mDistanceCV.setVisibility(View.INVISIBLE);
-        mKcalCV.setVisibility(View.INVISIBLE);
+        mStepCV.setVisibility(View.INVISIBLE);
+
 
         mTimeTV.setText(null);
         mDistanceTV.setText(null);
-        mKcalTV.setText(null);
+        mStepTV.setText(null);
     }
 
     private void displayNumFlags() {
@@ -532,10 +557,12 @@ public class MapViewFragment extends Fragment implements
                     setTime();
                     mTimeTV.setText(String.format(
                             Locale.getDefault(), "%02d : %02d : %02d", mHours, mMinutes, mSeconds));
+
+
+
                 }
             });
         }
-
     }
-
 }
+

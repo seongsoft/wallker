@@ -18,6 +18,7 @@ import com.google.maps.GeoApiContext;
 import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 import com.seongsoft.wallker.R;
+import com.seongsoft.wallker.Utils.RoadTracker;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.Utils.BitmapUtils;
 
@@ -58,12 +59,15 @@ public class TreasureManager {
 
         double latitude = bounds.southwest.latitude + (latitudeRange * Math.random());
         double longitude = bounds.southwest.longitude + (longitudeRange * Math.random());
+//        com.google.maps.model.LatLng tresLatLng = new com.google.maps.model.LatLng(latitude, longitude);
+//        ArrayList<com.google.android.gms.maps.model.LatLng> points = new RoadTracker(map).getJsonData(tresLatLng, latLng);
 
-        Treasure treasure = new Treasure(latitude, longitude);
+        double newLat = latitude;
+        double newLng = longitude;
+        Treasure treasure = new Treasure(newLat, newLng);
         mDBManager.insertTreasure(treasure);
 
-        displayTreasure(new LatLng(latitude, longitude), map);
-
+        displayTreasure(new LatLng(newLat, newLng), map);
 //        new CreateTreasureTask().execute();
     }
 
@@ -95,13 +99,7 @@ public class TreasureManager {
         return (ArrayList<Treasure>) treasures;
     }
 
-    private LatLng findRoad(GeoApiContext context, com.google.maps.model.LatLng location) throws Exception {
-        com.google.maps.model.LatLng[] page = {location};
 
-        SnappedPoint[] points = RoadsApi.snapToRoads(context, true, page).await();
-
-        return new LatLng(points[0].location.lat, points[0].location.lng);
-    }
 
     private class CreateTreasureTask extends AsyncTask<Void, Void, LatLng[]> {
 

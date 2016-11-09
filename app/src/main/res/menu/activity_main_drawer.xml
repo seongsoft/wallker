@@ -2,12 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
         <item
+            android:id="@+id/nav_treasure"
+            android:icon="@drawable/ic_home_black_24dp"
+            android:title="@string/treasure"
+            />
+        <item
             android:id="@+id/nav_record"
             android:icon="@drawable/ic_walk_black"
             android:title="@string/record" />
-        <item
-            android:id="@+id/nav_treasure"
-            android:icon="@drawable/ic_work_black"
-            android:title="@string/treasure" />
     </group>
 </menu>

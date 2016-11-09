@@ -43,8 +43,8 @@ public class AddNameDialogFragment extends DialogFragment {
                             @Override
                             public void onClick(DialogInterface dialog, int id)
                             {
-                                listener.onNameInputComplete(mName
-                                .getText().toString());
+                                    listener.onNameInputComplete(mName
+                                            .getText().toString());
                             }
                         }).setNegativeButton("취소", null);
         return builder.create();
