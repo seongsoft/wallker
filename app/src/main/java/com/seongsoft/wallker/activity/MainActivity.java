@@ -182,8 +182,9 @@ public class MainActivity extends AppCompatActivity implements
                     .replace(R.id.container, new MapRecordFrgment())
                     .addToBackStack(null)
                     .commit();
+        }else if(id == R.id.nav_home){
+            showWalkStartFAB();
         }
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
