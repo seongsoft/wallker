@@ -10,7 +10,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.beans.Walking;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**

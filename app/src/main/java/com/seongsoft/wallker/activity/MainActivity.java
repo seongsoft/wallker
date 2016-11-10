@@ -12,14 +12,13 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
+import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.dialog.AddNameDialogFragment;
 import com.seongsoft.wallker.fragment.MapRecordFrgment;
-import com.seongsoft.wallker.manager.DatabaseManager;
 import com.seongsoft.wallker.fragment.MapViewFragment;
-import com.seongsoft.wallker.R;
+import com.seongsoft.wallker.manager.DatabaseManager;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -30,6 +29,7 @@ public class MainActivity extends AppCompatActivity implements
     private DatabaseManager mDBManager;
 
     private boolean isMap = true;
+    private FloatingActionButton flagFAB;
     private FloatingActionButton walkStartFAB;
     private AlertDialog mDialog = null;
     private MapViewFragment mapViewFragment;
@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements
         setSupportActionBar(toolbar);
 
 
-//        deleteDatabase("wallker.db");
+        deleteDatabase("wallker.db");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -60,28 +60,7 @@ public class MainActivity extends AppCompatActivity implements
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
 
-//        FloatingActionButton switchFAB = (FloatingActionButton) findViewById(R.id.fab_switch);
-//        switchFAB.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (isMap) {
-//                    getSupportFragmentManager()
-//                            .beginTransaction()
-//                            .replace(R.id.container, myInfoFragment)
-//                            .commit();
-//                } else {
-//                    getSupportFragmentManager()
-//                            .beginTransaction()
-//                            .replace(R.id.container, mapViewFragment)
-//                            .commit();
-//                }
-//                isMap = !isMap;
-//            }
-//        });
-
-        walkStartFAB = (FloatingActionButton) findViewById(R.id.fab_walking);
-        walkStartFAB.setOnClickListener(new View.OnClickListener() {
-        final FloatingActionButton flagFAB = (FloatingActionButton) findViewById(R.id.fab_flag);
+        flagFAB = (FloatingActionButton) findViewById(R.id.fab_flag);
         flagFAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -89,33 +68,11 @@ public class MainActivity extends AppCompatActivity implements
             }
         });
 
-        final FloatingActionButton walkingFAB = (FloatingActionButton) findViewById(R.id.fab_walking);
-        walkingFAB.setOnClickListener(new View.OnClickListener() {
+        walkStartFAB = (FloatingActionButton) findViewById(R.id.fab_walking);
+        walkStartFAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(!mapViewFragment.isWalkOn()) {
-//                    LayoutInflater inflater = getLayoutInflater();
-//                    final View dialogView = inflater.inflate(R.layout.dialog_walking_name, null);
-//                    AlertDialog.Bilder builder = new AlertDialog.Builder(getApplicationContext());
-//                    builder.setTitle("걸음명");
-//                    builder.setView(dialogView);
-//                    builder.setPositiveButton("Complite", new DialogInterface.OnClickListener() {
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//                            EditText editText = (EditText)dialogView.findViewById(R.id.dialog_edit);
-//                        }
-//                    });
-//                    builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-//                        //Dialog에 "Cancel"이라는 타이틀의 버튼을 설정
-//                        @Override
-//                        public void onClick(DialogInterface dialog, int which) {
-//                            // TODO Auto-generated method stub
-//                            //멤버 정보의 입력을 취소하고 Dialog를 종료하는 작업
-//                            //취소하였기에 특별한 작업은 없고 '취소'했다는 메세지만 Toast로 출력
-//                            Toast.makeText(MainActivity.this, "멤버 추가를 취소합니다", Toast.LENGTH_SHORT).show();
-//                        }
-//                    });
-//                    AlertDialog dialog = builder.create();
                     mapViewFragment.stopLocationUpdates();
                     AddNameDialogFragment dialog = AddNameDialogFragment.newInstance(new AddNameDialogFragment.NameInputListener() {
                         @Override
@@ -125,16 +82,11 @@ public class MainActivity extends AppCompatActivity implements
                                 mapViewFragment.changeWalkState();          //걸음 상태 true
                                 walkStartFAB.setImageResource(R.drawable.ic_stop);
                                 Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
-                                    MenuItem item = (MenuItem) findViewById(R.id.action_location_refresh);
+//                                MenuItem item = (MenuItem) findViewById(R.id.action_location_refresh);
 //                                item.setVisible(false);
                             }else{
                                 Toast.makeText(getApplicationContext(), "걸음이름은 꼭 입렵해주세야 합니다. 다시 시도해주세요.", Toast.LENGTH_SHORT).show();
                             }
-                            mapViewFragment.walkStart(name);            //걸음 시작, 걸음 이름 넘겨줌
-                            mapViewFragment.changeWalkState();          //걸음 상태 true
-                            walkingFAB.setImageResource(R.drawable.ic_stop);
-                            flagFAB.setVisibility(View.VISIBLE);
-                            Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
                         }
                     });
                     dialog.show(getFragmentManager(), "addDialog");
@@ -144,8 +96,6 @@ public class MainActivity extends AppCompatActivity implements
                     mapViewFragment.changeWalkState();
                     mapViewFragment.walkEnd();
                     walkStartFAB.setImageResource(R.drawable.ic_play);
-                    walkingFAB.setImageResource(R.drawable.ic_play);
-                    flagFAB.setVisibility(View.GONE);
                 }
             }
         });
@@ -180,17 +130,17 @@ public class MainActivity extends AppCompatActivity implements
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        if(id == R.id.action_location_refresh){
-            if(!isGPSButton){
-                mapViewFragment.startLocationUpdates();
-                isGPSButton = true;
-                item.setIcon(R.drawable.ic_gps_fixed_white_24dp);
-            }else{
-                mapViewFragment.stopLocationUpdates();
-                isGPSButton = false;
-                item.setIcon(R.drawable.ic_gps_not_fixed_white_24dp);
-            }
-        }
+//        if(id == R.id.action_location_refresh){
+//            if(!isGPSButton){
+//                mapViewFragment.startLocationUpdates();
+//                isGPSButton = true;
+//                item.setIcon(R.drawable.ic_gps_fixed_white_24dp);
+//            }else{
+//                mapViewFragment.stopLocationUpdates();
+//                isGPSButton = false;
+//                item.setIcon(R.drawable.ic_gps_not_fixed_white_24dp);
+//            }
+//        }
 
         //noinspection SimplifiableIfStatement
 //        if (id == R.id.action_settings) {
@@ -222,6 +172,7 @@ public class MainActivity extends AppCompatActivity implements
                     .commit();
         }else if(id == R.id.nav_home){
             showWalkStartFAB();
+            getFragmentManager().popBackStack();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

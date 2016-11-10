@@ -17,6 +17,14 @@ import java.util.List;
 
 public class DataManager {
 
+    public static JSONObject createZoneJSONObject(double latitude, double longitude) throws JSONException {
+        JSONObject zoneJObject = new JSONObject();
+        zoneJObject.put("latitude", latitude);
+        zoneJObject.put("longitude", longitude);
+
+        return zoneJObject;
+    }
+
     public static JSONObject createBoundsJSONObject(LatLngBounds bounds) throws JSONException {
         JSONObject messageJObject = new JSONObject();
 

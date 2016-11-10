@@ -4,7 +4,6 @@ import android.annotation.TargetApi;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -24,10 +23,8 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -36,14 +33,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.seongsoft.wallker.R;
-import com.seongsoft.wallker.beans.User;
 import com.seongsoft.wallker.beans.Walking;
 import com.seongsoft.wallker.manager.DatabaseManager;
-import com.seongsoft.wallker.manager.TreasureManager;
 
-import org.w3c.dom.Text;
-
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -54,7 +46,7 @@ public class MapRecordFrgment extends Fragment implements
         View.OnClickListener,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener
-        {
+{
     private MapView mMapView;
     private GoogleMap mMap;
     private LinearLayout mBottomBar;
@@ -207,8 +199,8 @@ public class MapRecordFrgment extends Fragment implements
                 .color(R.color.colorPrimary));
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pathPoints[pathPoints.length-1], 16));
         mMap.addMarker(new MarkerOptions()
-        .position(new LatLng(pathPoints[0].latitude, pathPoints[0].longitude))
-        .title("출발지").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
+                .position(new LatLng(pathPoints[0].latitude, pathPoints[0].longitude))
+                .title("출발지").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
         mMap.addMarker(new MarkerOptions()
                 .position(new LatLng(pathPoints[pathPoints.length-1].latitude, pathPoints[pathPoints.length-1].longitude))
                 .title("목적지").icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)));
@@ -278,7 +270,7 @@ public class MapRecordFrgment extends Fragment implements
     public ArrayAdapter addToAdapter(){
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(
                 getActivity(), android.R.layout.select_dialog_singlechoice);
-            for(int i = 0; i < dateList.size(); i++){
+        for(int i = 0; i < dateList.size(); i++){
             adapter.add(dateList.get(i));
         }
         return adapter;

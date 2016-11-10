@@ -1,20 +1,18 @@
 package com.seongsoft.wallker.fragment;
 
 import android.Manifest;
-
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -46,19 +44,20 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
 import com.google.maps.model.LatLng;
 import com.seongsoft.wallker.R;
-import com.seongsoft.wallker.Utils.BitmapUtils;
-import com.seongsoft.wallker.Utils.DistanceUtils;
-import com.seongsoft.wallker.Utils.PermissionUtils;
-import com.seongsoft.wallker.Utils.RoadTracker;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.beans.User;
 import com.seongsoft.wallker.beans.Walking;
+import com.seongsoft.wallker.beans.Zone;
+import com.seongsoft.wallker.manager.DataManager;
 import com.seongsoft.wallker.manager.DatabaseManager;
 import com.seongsoft.wallker.manager.TreasureManager;
 import com.seongsoft.wallker.utils.BitmapUtils;
 import com.seongsoft.wallker.utils.PermissionUtils;
 import com.seongsoft.wallker.utils.RoadTracker;
 import com.seongsoft.wallker.utils.TCPClient;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -67,9 +66,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ExecutionException;
 
-import static com.seongsoft.wallker.Utils.DistanceUtils.calDistance;
+import static com.seongsoft.wallker.utils.DistanceUtils.calDistance;
+import static com.seongsoft.wallker.utils.DistanceUtils.calKcal;
 
 /**
  * Created by BeINone on 2016-09-08.
@@ -91,7 +90,7 @@ public class MapViewFragment extends Fragment implements
     private static final double D_LNG_INTERVAL = 0.00340909090909;
     private static final long L_LAT_INTERVAL = 261688764829L;
     private static final long L_LNG_INTERVAL = 340909090909L;
-    private static final String IP = "192.168.42.15";
+    private static final String IP = "10.156.145.88";
     private static final int PORT = 52925;
     public static final float ZOOM = 18.0f;
 
@@ -304,7 +303,7 @@ public class MapViewFragment extends Fragment implements
             final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             if (mCameraMoveStarted) {
                 if (mMap.getCameraPosition().zoom == ZOOM) {
-                    Log.d(TAG, bounds.toString());
+//                    Log.d(TAG, bounds.toString());
 
                     drawZones(bounds);
 //                    try {
@@ -379,7 +378,7 @@ public class MapViewFragment extends Fragment implements
 
             // 이동거리 및 칼로리 디스플레이
             mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", mTotalDistance));
-            mKcalTV.setText(String.format(Locale.getDefault(), "%.2f",
+            mStepTV.setText(String.format(Locale.getDefault(), "%.2f",
                     calKcal(mUser.getWeight(), mTotalDistance)));
 
             endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
@@ -393,7 +392,6 @@ public class MapViewFragment extends Fragment implements
             totalDistance += mRoadTracker.getDistance();
             drawPath(path);
             startLatLng = endLatLng;
-        }
 
             if (mCurrentMarker != null) mCurrentMarker.remove();
 
@@ -661,14 +659,16 @@ public class MapViewFragment extends Fragment implements
     }
 
     public void putFlag() {
-        double latitude = (mCurrLatLng.lat - (mCurrLatLng.lat % L_LAT_INTERVAL)) / Math.pow(10, 14);
-        double longitude = (mCurrLatLng.lng - (mCurrLatLng.lng % L_LAT_INTERVAL)) / Math.pow(10, 14);
+        long lLatitude = (long) (mCurrLatLng.lat * Math.pow(10, 14));
+        long lLongitude = (long) (mCurrLatLng.lng * Math.pow(10, 14));
+        double latitude = (lLatitude - (lLatitude % L_LAT_INTERVAL)) / Math.pow(10, 14);
+        double longitude = (lLongitude - (lLongitude % L_LAT_INTERVAL)) / Math.pow(10, 14);
 
-        Zone zone = mDBManager.selectZone(latitude, longitude);
-        if (zone == null) {
-            mDBManager.insertZone(latitude, longitude);
-        } else {
-            mDBManager.updateZone(latitude, longitude);
+        try {
+            JSONObject zoneJObject = DataManager.createZoneJSONObject(latitude, longitude);
+            mConnectionTask.sendMessage(zoneJObject.toString());
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
 
         drawZone(mMap.getProjection().getVisibleRegion().latLngBounds);
@@ -686,7 +686,7 @@ public class MapViewFragment extends Fragment implements
 
         @Override
         protected TCPClient doInBackground(Void... params) {
-            Log.d(TAG, "In do in background");
+//            Log.d(TAG, "In do in background");
 
 //            mTCPClient = new TCPClient(mHandler, IP, PORT,
 //                    new TCPClient.MessageCallback() {
@@ -707,10 +707,10 @@ public class MapViewFragment extends Fragment implements
         protected void onPostExecute(TCPClient result) {
             super.onPostExecute(result);
 
-            Log.d(TAG, "In on post execute");
+//            Log.d(TAG, "In on post execute");
             if (result != null && result.isRunning()) {
                 result.stopClient();
-                Log.d(TAG, "Stopped");
+//                Log.d(TAG, "Stopped");
             }
 //            mHandler.sendEmptyMessageDelayed(MainActivity.SENT, 4000);
         }
@@ -719,7 +719,7 @@ public class MapViewFragment extends Fragment implements
         protected void onProgressUpdate(Void... values) {
             super.onProgressUpdate(values);
 
-            Log.d(TAG, "In progress update, values: " + values.toString());
+//            Log.d(TAG, "In progress update, values: " + values.toString());
 
 //            if (values[0].equals("shutdown")) {
 //                mTCPClient.sendMessage(COMMAND);
@@ -736,7 +736,7 @@ public class MapViewFragment extends Fragment implements
 
         @Override
         public void callbackMessageReceiver(String message) {
-            Log.d(TAG, "Message receive");
+//            Log.d(TAG, "Message receive");
             List<Zone> zones = DataManager.parseMessage(message);
 //            drawZones(zones);
         }

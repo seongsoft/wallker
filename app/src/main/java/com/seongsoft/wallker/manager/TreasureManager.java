@@ -15,10 +15,7 @@ import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.GeoApiContext;
-import com.google.maps.RoadsApi;
-import com.google.maps.model.SnappedPoint;
 import com.seongsoft.wallker.R;
-import com.seongsoft.wallker.Utils.RoadTracker;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.utils.BitmapUtils;
 
