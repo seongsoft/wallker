@@ -1,4 +1,4 @@
-package com.seongsoft.wallker.Utils;
+package com.seongsoft.wallker.utils;
 
 import android.Manifest;
 import android.app.AlertDialog;

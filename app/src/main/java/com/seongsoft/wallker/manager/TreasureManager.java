@@ -19,7 +19,7 @@ import com.google.maps.RoadsApi;
 import com.google.maps.model.SnappedPoint;
 import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.beans.Treasure;
-import com.seongsoft.wallker.Utils.BitmapUtils;
+import com.seongsoft.wallker.utils.BitmapUtils;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.seongsoft.wallker.Utils;
+package com.seongsoft.wallker.utils;
 
 /**
  * Created by BeINone on 2016-10-04.

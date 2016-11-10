@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.beans.Walking;
+import com.seongsoft.wallker.beans.Zone;
 
 import java.util.ArrayList;
 
@@ -38,6 +39,9 @@ public class DatabaseManager {
 
     private static final String INVENTORY_TABLE = "inventory";
     private static final String NUM_FLAGS = "num_flags";
+
+    private static final String ZONE_TABLE = "zone";
+    private static final String USERID = "userid";
 
     private DatabaseHelper mDBHelper;
 
@@ -87,6 +91,14 @@ public class DatabaseManager {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "INSERT INTO " + INVENTORY_TABLE
                 + " VALUES (0);";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void insertZone(double latitude, double longitude) {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "INSERT INTO " + ZONE_TABLE
+                + " VALUES (" + latitude + ", " + longitude + ", " + 1 + ", " + null + ");";
         db.execSQL(sql);
         db.close();
     }
@@ -164,6 +176,23 @@ public class DatabaseManager {
         return cursor.getInt(cursor.getColumnIndex(NUM_FLAGS));
     }
 
+    public Zone selectZone(double latitude, double longitude) {
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT " + NUM_FLAGS + ", " + USERID + " FROM " + ZONE_TABLE + ";";
+        Cursor cursor = db.rawQuery(sql, null);
+
+        Zone zone = null;
+        int numFlags = 0;
+        String userid = null;
+        while (cursor.moveToNext()) {
+            numFlags = cursor.getInt(cursor.getColumnIndex(NUM_FLAGS));
+            userid = cursor.getString(cursor.getColumnIndex(USERID));
+            zone = new Zone(latitude, longitude, numFlags, userid);
+        }
+
+        return zone;
+    }
+
     public void deleteTreasure(double latitude, double longitude) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "DELETE FROM " + TREASURE_TABLE
@@ -207,6 +236,15 @@ public class DatabaseManager {
         String sql = "UPDATE " + DISTANCE_TABLE + " SET "
                 + TODAY_DISTANCE + "=" + TODAY_DISTANCE + "+" + distance + ", "
                 + TOTAL_DISTANCE + "=" + TOTAL_DISTANCE + "+" + distance + ";";
+        db.execSQL(sql);
+        db.close();
+    }
+
+    public void updateZone(double latitude, double longitude) {
+        SQLiteDatabase db = mDBHelper.getWritableDatabase();
+        String sql = "UPDATE " + ZONE_TABLE + " SET "
+                + LATITUDE + "=" + latitude + ", " + LONGITUDE + "=" + longitude + ", "
+                + NUM_FLAGS + "=" + NUM_FLAGS + "+" + 1 + ";";
         db.execSQL(sql);
         db.close();
     }
