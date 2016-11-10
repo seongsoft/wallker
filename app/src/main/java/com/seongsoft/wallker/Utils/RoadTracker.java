@@ -29,7 +29,6 @@ import java.util.List;
  * Created by dsm_025 on 2016-09-18.
  */
 public class RoadTracker {
-
     private static final String TAG = "RoadTracker";
     private GoogleMap mMap;
     private GeoApiContext mContext;
@@ -82,7 +81,7 @@ public class RoadTracker {
                     Log.d(TAG, "run: " + message);
                     String responseString;
                     if(response.getEntity() != null)
-                       responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
+                        responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
                     else
                         return;
                     String strData = "";
@@ -193,4 +192,5 @@ public class RoadTracker {
     public int getDistance(){
         return totalDistance;
     }
+
 }

@@ -12,9 +12,11 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.seongsoft.wallker.dialog.AddNameDialogFragment;
+import com.seongsoft.wallker.fragment.MapRecordFrgment;
 import com.seongsoft.wallker.manager.DatabaseManager;
 import com.seongsoft.wallker.fragment.MapViewFragment;
 import com.seongsoft.wallker.R;
@@ -23,13 +25,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements
-        NavigationView.OnNavigationItemSelectedListener {
+    NavigationView.OnNavigationItemSelectedListener {
 
     private DatabaseManager mDBManager;
 
     private boolean isMap = true;
-
+    private FloatingActionButton walkStartFAB;
     private AlertDialog mDialog = null;
+    private MapViewFragment mapViewFragment;
+    private boolean isGPSButton = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,7 +41,8 @@ public class MainActivity extends AppCompatActivity implements
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        deleteDatabase("wallker.db");
+
+//        deleteDatabase("wallker.db");
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -50,7 +55,7 @@ public class MainActivity extends AppCompatActivity implements
 
         mDBManager = new DatabaseManager(this);
 
-        final MapViewFragment mapViewFragment = new MapViewFragment();
+        mapViewFragment = new MapViewFragment();
 
         getSupportFragmentManager().beginTransaction().add(R.id.container, mapViewFragment)
                 .commit();
@@ -74,6 +79,8 @@ public class MainActivity extends AppCompatActivity implements
 //            }
 //        });
 
+        walkStartFAB = (FloatingActionButton) findViewById(R.id.fab_walking);
+        walkStartFAB.setOnClickListener(new View.OnClickListener() {
         final FloatingActionButton flagFAB = (FloatingActionButton) findViewById(R.id.fab_flag);
         flagFAB.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -113,6 +120,16 @@ public class MainActivity extends AppCompatActivity implements
                     AddNameDialogFragment dialog = AddNameDialogFragment.newInstance(new AddNameDialogFragment.NameInputListener() {
                         @Override
                         public void onNameInputComplete(String name) {
+                            if(name != null) {
+                                mapViewFragment.walkStart(name);            //걸음 시작, 걸음 이름 넘겨줌
+                                mapViewFragment.changeWalkState();          //걸음 상태 true
+                                walkStartFAB.setImageResource(R.drawable.ic_stop);
+                                Toast.makeText(getApplicationContext(), "걸음 시작", Toast.LENGTH_SHORT).show();
+                                    MenuItem item = (MenuItem) findViewById(R.id.action_location_refresh);
+//                                item.setVisible(false);
+                            }else{
+                                Toast.makeText(getApplicationContext(), "걸음이름은 꼭 입렵해주세야 합니다. 다시 시도해주세요.", Toast.LENGTH_SHORT).show();
+                            }
                             mapViewFragment.walkStart(name);            //걸음 시작, 걸음 이름 넘겨줌
                             mapViewFragment.changeWalkState();          //걸음 상태 true
                             walkingFAB.setImageResource(R.drawable.ic_stop);
@@ -126,6 +143,7 @@ public class MainActivity extends AppCompatActivity implements
                     Toast.makeText(getApplicationContext(), "걸음 종료", Toast.LENGTH_SHORT).show();
                     mapViewFragment.changeWalkState();
                     mapViewFragment.walkEnd();
+                    walkStartFAB.setImageResource(R.drawable.ic_play);
                     walkingFAB.setImageResource(R.drawable.ic_play);
                     flagFAB.setVisibility(View.GONE);
                 }
@@ -162,6 +180,17 @@ public class MainActivity extends AppCompatActivity implements
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+        if(id == R.id.action_location_refresh){
+            if(!isGPSButton){
+                mapViewFragment.startLocationUpdates();
+                isGPSButton = true;
+                item.setIcon(R.drawable.ic_gps_fixed_white_24dp);
+            }else{
+                mapViewFragment.stopLocationUpdates();
+                isGPSButton = false;
+                item.setIcon(R.drawable.ic_gps_not_fixed_white_24dp);
+            }
+        }
 
         //noinspection SimplifiableIfStatement
 //        if (id == R.id.action_settings) {
@@ -185,9 +214,14 @@ public class MainActivity extends AppCompatActivity implements
         int id = item.getItemId();
 
         if (id == R.id.nav_record) {
-
-        } else if(id == R.id.nav_treasure){
-
+            hideWalkStartFAB();
+            getFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.container, new MapRecordFrgment())
+                    .addToBackStack(null)
+                    .commit();
+        }else if(id == R.id.nav_home){
+            showWalkStartFAB();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -206,5 +240,10 @@ public class MainActivity extends AppCompatActivity implements
             mDBManager.insertDate(currentDate);
         }
     }
-
+    public void showWalkStartFAB(){
+        walkStartFAB.show();
+    }
+    public void hideWalkStartFAB(){
+        walkStartFAB.hide();
+    }
 }

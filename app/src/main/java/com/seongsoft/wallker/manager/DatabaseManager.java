@@ -4,12 +4,13 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.beans.Walking;
-import com.seongsoft.wallker.beans.Zone;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -32,6 +33,11 @@ public class DatabaseManager {
     private static final String DISTANCE = "distance";
     private static final String LINES = "lines";
     private static final String DATES = "dates";
+    private static final String STEP = "step";
+    private static final String SPEEDAVER = "speedaver";
+    private static final String NUMFLAG = "numflag";
+    private static final String TIME = "time";
+
 
     private static final String DISTANCE_TABLE = "distance";
     private static final String TODAY_DISTANCE = "today_distance";
@@ -39,9 +45,6 @@ public class DatabaseManager {
 
     private static final String INVENTORY_TABLE = "inventory";
     private static final String NUM_FLAGS = "num_flags";
-
-    private static final String ZONE_TABLE = "zone";
-    private static final String USERID = "userid";
 
     private DatabaseHelper mDBHelper;
 
@@ -55,12 +58,52 @@ public class DatabaseManager {
     public void insertWalking(Walking walking){
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "INSERT INTO " + WALKING_TABLE
-                + " VALUES (" + walking.getWlak_name()
-                + ", " + walking.getDistance()
-                + ", " + JSONManager.bindJSON(walking.getLines())
-                + ", " + walking.getDate() + ");";
+                + " ("  + WALKING_NAME + ", " + DISTANCE + ", " + LINES + ", " + STEP + ", "
+                + SPEEDAVER + ", " + NUMFLAG + ", " + TIME + ", "+ DATES  + ")"
+                + " VALUES ('" + walking.getWlak_name()
+                + "', " + walking.getDistance()
+                + ", '" + JSONManager.bindJSON(walking.getLines())
+                + "', " + walking.getStep()
+                +", " + walking.getSppedAverage()
+                +", " + walking.getNumflag()
+                +", '" + walking.getTime()
+                + "', '" + walking.getDate() + "');";
+        System.out.println("sql : " + sql);
         db.execSQL(sql);
         db.close();
+    }
+    public ArrayList<String> selectAllDate(){
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        ArrayList<String> dateList = new ArrayList<>();
+        String sql = "SELECT DISTINCT SUBSTR("+ DATES+", 1, 10) AS 'date' FROM " + WALKING_TABLE + " ORDER BY " + DATES + " ASC";
+        Log.d("selectAllDate: " , sql);
+        Cursor cursor = db.rawQuery(sql, null);
+        while(cursor.moveToNext()){
+            String date = cursor.getString(cursor.getColumnIndex("date"));
+            dateList.add(date);
+        }
+        return dateList;
+    }
+    public ArrayList<Walking> selectDayWalking(String date){
+        SQLiteDatabase db = mDBHelper.getReadableDatabase();
+        String sql = "SELECT * FROM " + WALKING_TABLE + " WHERE " + DATES + " LIKE " + "'" + date + "%" + "'"
+                + " ORDER BY " + DATES + " ASC";
+
+        Cursor cursor1 = db.rawQuery(sql, null);
+        ArrayList<Walking> walklist  = new ArrayList<>();
+        while(cursor1.moveToNext() ){
+            String walk_name = cursor1.getString(cursor1.getColumnIndex(WALKING_NAME));
+            double distance = cursor1.getDouble(cursor1.getColumnIndex(DISTANCE));
+            ArrayList<com.google.android.gms.maps.model.LatLng> list = JSONManager.parseJSON(cursor1.getString(cursor1.getColumnIndex(LINES)));
+            int step = cursor1.getInt(cursor1.getColumnIndex(STEP));
+            double speedAver = cursor1.getDouble(cursor1.getColumnIndex(SPEEDAVER));
+            int numFlag = cursor1.getInt(cursor1.getColumnIndex(NUMFLAG));
+            int time = cursor1.getInt(cursor1.getColumnIndex(TIME));
+            String dates = cursor1.getString(cursor1.getColumnIndex(DATES));
+            Walking walking = new Walking(walk_name, distance, list, dates, time, numFlag, speedAver, step);
+            walklist.add(walking);
+        }
+        return walklist;
     }
 
     public void insertTreasure(Treasure treasure) {
@@ -70,6 +113,7 @@ public class DatabaseManager {
         db.execSQL(sql);
         db.close();
     }
+
 
     public void insertDate(String date) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
@@ -93,31 +137,6 @@ public class DatabaseManager {
                 + " VALUES (0);";
         db.execSQL(sql);
         db.close();
-    }
-
-    public void insertZone(double latitude, double longitude) {
-        SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "INSERT INTO " + ZONE_TABLE
-                + " VALUES (" + latitude + ", " + longitude + ", " + 1 + ", " + null + ");";
-        db.execSQL(sql);
-        db.close();
-    }
-
-    public ArrayList<Walking> selectAllWalking(){
-        SQLiteDatabase db = mDBHelper.getReadableDatabase();
-        String sql = "SELECT * FROM " + WALKING_TABLE
-                + " ORDER BY " + DATES + " ASC";
-        Cursor cursor = db.rawQuery(sql, null);
-        ArrayList<Walking> allList  = new ArrayList<>();
-        while(cursor.moveToNext()){
-            String walk_name = cursor.getString(cursor.getColumnIndex("walk_name"));
-            double distance = cursor.getDouble(cursor.getColumnIndex("distance"));
-            ArrayList<com.google.android.gms.maps.model.LatLng> list = JSONManager.parseJSON(cursor.getString(cursor.getColumnIndex("lines")));
-            String date = cursor.getString(cursor.getColumnIndex("date"));
-            Walking walking = new Walking(walk_name, distance, list, date);
-            allList.add(walking);
-        }
-        return allList;
     }
 
     public ArrayList<Treasure> selectTreasure(LatLngBounds bounds) {
@@ -176,23 +195,6 @@ public class DatabaseManager {
         return cursor.getInt(cursor.getColumnIndex(NUM_FLAGS));
     }
 
-    public Zone selectZone(double latitude, double longitude) {
-        SQLiteDatabase db = mDBHelper.getReadableDatabase();
-        String sql = "SELECT " + NUM_FLAGS + ", " + USERID + " FROM " + ZONE_TABLE + ";";
-        Cursor cursor = db.rawQuery(sql, null);
-
-        Zone zone = null;
-        int numFlags = 0;
-        String userid = null;
-        while (cursor.moveToNext()) {
-            numFlags = cursor.getInt(cursor.getColumnIndex(NUM_FLAGS));
-            userid = cursor.getString(cursor.getColumnIndex(USERID));
-            zone = new Zone(latitude, longitude, numFlags, userid);
-        }
-
-        return zone;
-    }
-
     public void deleteTreasure(double latitude, double longitude) {
         SQLiteDatabase db = mDBHelper.getWritableDatabase();
         String sql = "DELETE FROM " + TREASURE_TABLE
@@ -236,15 +238,6 @@ public class DatabaseManager {
         String sql = "UPDATE " + DISTANCE_TABLE + " SET "
                 + TODAY_DISTANCE + "=" + TODAY_DISTANCE + "+" + distance + ", "
                 + TOTAL_DISTANCE + "=" + TOTAL_DISTANCE + "+" + distance + ";";
-        db.execSQL(sql);
-        db.close();
-    }
-
-    public void updateZone(double latitude, double longitude) {
-        SQLiteDatabase db = mDBHelper.getWritableDatabase();
-        String sql = "UPDATE " + ZONE_TABLE + " SET "
-                + LATITUDE + "=" + latitude + ", " + LONGITUDE + "=" + longitude + ", "
-                + NUM_FLAGS + "=" + NUM_FLAGS + "+" + 1 + ";";
         db.execSQL(sql);
         db.close();
     }
@@ -303,9 +296,14 @@ public class DatabaseManager {
 
             sql = "CREATE TABLE " + WALKING_TABLE + " ("
                     + WALKING_NAME + " TEXT NOT NULL, "
-                    + DISTANCE + " REAL NOT NULL, "
+                    + DISTANCE + " DOUBLE NOT NULL, "
                     + LINES + " TEXT NOT NULL, "
-                    + DATES + "TEXT NOT NULL PRIMARY KEY);";
+                    + STEP + " INT NOT NULL, "
+                    + SPEEDAVER + " DOUBLE NOT NULL, "
+                    + NUMFLAG + " INT NOT NULL, "
+                    + TIME + " TEXT NOT NULL, "
+                    + DATES + " TEXT NOT NULL PRIMARY KEY);";
+            Log.d("sql : ", sql);
             db.execSQL(sql);
 
             sql = "CREATE TABLE " + INVENTORY_TABLE + " ("
