@@ -37,6 +37,7 @@ import com.seongsoft.wallker.beans.Walking;
 import com.seongsoft.wallker.manager.DatabaseManager;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 /**
  * Created by dsm_025 on 2016-10-15.
@@ -77,6 +78,9 @@ public class MapRecordFrgment extends Fragment implements
     private TextView mDateTV;
 
     private String selectedData;
+    private int mSeconds;
+    private int mMinutes;
+    private int mHours;
 
     @TargetApi(Build.VERSION_CODES.M)
     @Override
@@ -133,10 +137,8 @@ public class MapRecordFrgment extends Fragment implements
 
         mWalkingNameTV = (TextView)v.findViewById(R.id.tv_walking_name);
         mDateTV = (TextView)v.findViewById(R.id.tv_date);
-
         dateList = mDBManager.selectAllDate();
-        walkList = mDBManager.selectDayWalking(dateList.get(dateList.size()-1));          //가장 최근의 데이터들 가지고 온다.
-        currentCnt = 0;
+        walkList = mDBManager.selectDayWalking(dateList.get(dateList.size() - 1));          //가장 최근의 데이터들 가지고 온다.currentCnt = 0;
         return v;
     }
 
@@ -185,10 +187,11 @@ public class MapRecordFrgment extends Fragment implements
         mDateTV.setText(dateArr[0] + "년 " +dateArr[1] + "월 " + dateArr[2] + "일 " + dateArr[3] + "시 " + dateArr[4] + "분");
 
         mNumFlagsRecordTV.setText(Integer.toString(walkList.get(currentCnt).getNumflag()));
-        mTimeRecordTV.setText(Integer.toString(walkList.get(currentCnt).getTime()));
-        mDistanceRecordTV.setText(Double.toString(walkList.get(currentCnt).getDistance()));
+        int time = walkList.get(currentCnt).getTime();
+        mTimeRecordTV.setText(String.format(Locale.getDefault(), "%02d :  %02d :  %02d", time / 3600, (time %= 3600) / 60, time %= 60));
+        mDistanceRecordTV.setText(String.format(Locale.getDefault(), "%.2f", walkList.get(currentCnt).getDistance()));
         mStepRecordTV.setText(Integer.toString(walkList.get(currentCnt).getStep()));
-        mSpeedRecordTV.setText(Double.toString(walkList.get(currentCnt).getSppedAverage()));
+        mSpeedRecordTV.setText(String.format(Locale.getDefault(), "%.2f", walkList.get(currentCnt).getSppedAverage()));
         setLocation();
     }
     public void setLocation(){
@@ -279,7 +282,11 @@ public class MapRecordFrgment extends Fragment implements
         walkList = mDBManager.selectDayWalking(selectedData);
         currentCnt = 0;
     }
+    private void setTime(int time) {
+        mHours = time / 3600;
+        mMinutes %= 3600 / 60;
 
+    }
     @Override
     public void onConnected(@Nullable Bundle bundle) {
 
@@ -294,6 +301,4 @@ public class MapRecordFrgment extends Fragment implements
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
 
     }
-
-
 }
