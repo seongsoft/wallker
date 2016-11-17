@@ -15,6 +15,15 @@
     <string name="speed">km/h</string>
     <string name="gps_button">위치 초기화</string>
     <string name="action_rotate">위치 새로고침</string>
+
+    <string name="login">로그인</string>
+    <string name="logout">로그아웃</string>
+    <string name="id">아이디</string>
+    <string name="password">비밀번호</string>
+    <string name="weight">몸무게</string>
+    <string name="link_signup">계정이 없으신가요?</string>
+    <string name="signup">계정 생성</string>
+    <string name="link_login">이미 회원이신가요?</string>
     <!--    Permissions    -->
     <string name="permission_rationale_location">Access to the location service is required to demonstrate the \'my location\' feature, which shows your current location on the map.</string>
     <string name="location_permission_denied">This sample requires location permission to enable the \'my location\' layer. Please try again and grant access to use the location.\nIf the permission has been permanently denied, it can be enabled from the System Settings &gt; Apps &gt; \'Google Maps API Demos\'.</string>
