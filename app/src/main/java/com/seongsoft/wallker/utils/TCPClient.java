@@ -46,7 +46,7 @@ import java.net.Socket;
 //        if (out != null && !out.checkError()) {
 //            out.println(message);
 //            out.flush();
-////            mHandler.sendEmptyMessageDelayed(MainActivity.SENDING, 1000);
+////            mHandler.sendEmptyMessageDelayed(MapActivity.SENDING, 1000);
 //            Log.d(TAG, "Sent Message: " + message);
 //
 //        }
@@ -70,12 +70,12 @@ import java.net.Socket;
 //            Log.d(TAG, "Connecting...");
 //
 //            /**
-//             * Sending empty message with static int value from MainActivity
+//             * Sending empty message with static int value from MapActivity
 //             * to update UI ( 'Connecting...' ).
 //             *
-//             * @see com.example.turnmeoff.MainActivity.CONNECTING
+//             * @see com.example.turnmeoff.MapActivity.CONNECTING
 //             */
-////            mHandler.sendEmptyMessageDelayed(MainActivity.CONNECTING, 1000);
+////            mHandler.sendEmptyMessageDelayed(MapActivity.CONNECTING, 1000);
 //
 //            /**
 //             * Here the socket is created with hardcoded port.
@@ -98,7 +98,7 @@ import java.net.Socket;
 //                Log.d(TAG, "In/Out created");
 //
 //                //
-////                mHandler.sendEmptyMessageDelayed(MainActivity.SENDING, 2000);
+////                mHandler.sendEmptyMessageDelayed(MapActivity.SENDING, 2000);
 //
 //                //Listen for the incoming messages while mRun = true
 //                while (mRun) {
@@ -125,7 +125,7 @@ import java.net.Socket;
 //            } catch (Exception e) {
 //
 //                Log.d(TAG, "Error", e);
-////                mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
+////                mHandler.sendEmptyMessageDelayed(MapActivity.ERROR, 2000);
 //
 //            } finally {
 //
@@ -133,14 +133,14 @@ import java.net.Socket;
 //                out.close();
 //                in.close();
 //                socket.close();
-////                mHandler.sendEmptyMessageDelayed(MainActivity.SENT, 3000);
+////                mHandler.sendEmptyMessageDelayed(MapActivity.SENT, 3000);
 //                Log.d(TAG, "Socket Closed");
 //            }
 //
 //        } catch (Exception e) {
 //
 //            Log.d(TAG, "Error", e);
-////            mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
+////            mHandler.sendEmptyMessageDelayed(MapActivity.ERROR, 2000);
 //
 //        }
 //

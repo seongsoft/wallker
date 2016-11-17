@@ -1,7 +1,9 @@
 package com.seongsoft.wallker.fragment;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -36,21 +38,26 @@ import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.maps.GeoApiContext;
-import com.google.maps.model.LatLng;
 import com.seongsoft.wallker.R;
+import com.seongsoft.wallker.beans.Member;
 import com.seongsoft.wallker.beans.Treasure;
-import com.seongsoft.wallker.beans.User;
 import com.seongsoft.wallker.beans.Walking;
 import com.seongsoft.wallker.beans.Zone;
+import com.seongsoft.wallker.constants.HttpConst;
+import com.seongsoft.wallker.constants.PrefConst;
+import com.seongsoft.wallker.constants.ZoneConst;
+import com.seongsoft.wallker.dialog.PutFlagDialogFragment;
 import com.seongsoft.wallker.manager.DataManager;
 import com.seongsoft.wallker.manager.DatabaseManager;
+import com.seongsoft.wallker.manager.JSONManager;
 import com.seongsoft.wallker.manager.TreasureManager;
+import com.seongsoft.wallker.manager.ZoneDrawer;
 import com.seongsoft.wallker.utils.BitmapUtils;
 import com.seongsoft.wallker.utils.PermissionUtils;
 import com.seongsoft.wallker.utils.RoadTracker;
@@ -59,6 +66,14 @@ import com.seongsoft.wallker.utils.TCPClient;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -86,17 +101,21 @@ public class MapViewFragment extends Fragment implements
         Longitude Interval: 0.00340909090909
      */
 
-    private static final double D_LAT_INTERVAL = 0.00261688764829;
-    private static final double D_LNG_INTERVAL = 0.00340909090909;
-    private static final long L_LAT_INTERVAL = 261688764829L;
-    private static final long L_LNG_INTERVAL = 340909090909L;
     private static final String IP = "10.156.145.88";
     private static final int PORT = 52925;
     public static final float ZOOM = 18.0f;
 
+    private SharedPreferences mAppInfoPref;
+    private SharedPreferences.Editor mAppInfoPrefEditor;
+    private SharedPreferences mUserPref;
+    private SharedPreferences.Editor mUserPrefEditor;
+    private SharedPreferences mWalkingDistancePref;
+    private SharedPreferences.Editor mWalkingDistancePrefEditor;
+
     private ConnectionTask mConnectionTask;
 
-    private User mUser;
+    private Member mMember;
+    private ZoneDrawer mZoneDrawer;
 
     private String walk_name;
     private String currentDate;
@@ -114,8 +133,8 @@ public class MapViewFragment extends Fragment implements
     private Timer mUpdateTimeTimer;
 
     private boolean mRequestingLocationUpdates;
-    private LatLng mPrevLatLng;
-    private LatLng mCurrLatLng;
+    private com.google.maps.model.LatLng mPrevLatLng;
+    private com.google.maps.model.LatLng mCurrLatLng;
     private Marker mCurrentMarker;
     private double mCheckingDistance;      // 단위는 km
     private double mTotalDistance;
@@ -128,12 +147,12 @@ public class MapViewFragment extends Fragment implements
     private boolean walkState = false;
     private RoadTracker mRoadTracker;
     private ArrayList<LatLng> mCheckedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
-    private LatLng startLatLng = new LatLng(0, 0);
-    private LatLng endLatLng = new LatLng(0, 0);
+    private com.google.maps.model.LatLng startLatLng = new com.google.maps.model.LatLng(0, 0);
+    private com.google.maps.model.LatLng endLatLng = new com.google.maps.model.LatLng(0, 0);
 
     private boolean mPermissionDenied;
     private boolean mCameraMoveStarted;
-    private boolean mFirstStart = true;
+    private boolean mFirstStart;
 
     private CardView mNumFlagsCV;
     private CardView mTimeCV;
@@ -151,6 +170,24 @@ public class MapViewFragment extends Fragment implements
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        mAppInfoPref = getContext().getSharedPreferences(PrefConst.APP_INFO_PREF, 0);
+        mAppInfoPrefEditor = mAppInfoPref.edit();
+        mUserPref = getContext().getSharedPreferences(PrefConst.USER_PREF, 0);
+        mUserPrefEditor = mUserPref.edit();
+        mWalkingDistancePref = getContext().getSharedPreferences(PrefConst.WALKING_DISTANCE_PREF, 0);
+        mWalkingDistancePrefEditor = mWalkingDistancePref.edit();
+
+        if (mFirstStart = mAppInfoPref.getBoolean(PrefConst.IS_FIRST_EXECUTE, true)) {
+            mAppInfoPrefEditor.putBoolean(PrefConst.IS_FIRST_EXECUTE, false).apply();
+        }
+
+        mMember = new Member(mUserPref.getString(PrefConst.ID, ""),
+                mUserPref.getString(PrefConst.PASSWORD, ""),
+                mUserPref.getInt(PrefConst.WEIGHT, 0),
+                mUserPref.getInt(PrefConst.NUM_FLAGS, 0));
+
+        mTotalDistance = mWalkingDistancePref.getFloat(PrefConst.TOTAL_DISTANCE, 0);
+
         mGoogleApiClient = new GoogleApiClient.Builder(getContext())
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -162,8 +199,6 @@ public class MapViewFragment extends Fragment implements
 
         mDBManager = new DatabaseManager(getContext());
         mTreasureManager = new TreasureManager(getContext(), mGeoContext);
-
-        mUser = new User(55);
 
 //        mConnectionTask = new ConnectionTask();
 //        mConnectionTask.execute();
@@ -191,6 +226,8 @@ public class MapViewFragment extends Fragment implements
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 mMap = googleMap;
+
+                mZoneDrawer = new ZoneDrawer(getContext(), mMap, mMember);
 
                 mMap.setOnCameraMoveStartedListener(MapViewFragment.this);
                 mMap.setOnCameraIdleListener(MapViewFragment.this);
@@ -299,59 +336,52 @@ public class MapViewFragment extends Fragment implements
 
     @Override
     public void onCameraIdle() {
-        if (walkState) {
+        if (mCameraMoveStarted) {
             final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
-            if (mCameraMoveStarted) {
-                if (mMap.getCameraPosition().zoom == ZOOM) {
-//                    Log.d(TAG, bounds.toString());
+            mZoneDrawer.drawZones(bounds);
 
-                    drawZones(bounds);
-//                    try {
-//                        JSONObject messageJSONObject = DataManager.createBoundsJSONObject(bounds);
-//                        mConnectionTask.sendMessage(messageJSONObject.toString());
-//                    } catch (JSONException e) {
-//                        e.printStackTrace();
-//                    }
-
-                    if (mCheckingDistance >= 0.1 || mFirstStart) {
-                        mTreasureManager.createTreasure(bounds, mMap);
-                        mCheckingDistance = 0;
-                        mFirstStart = false;
-                    }
-
-                    List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
-                    if (treasures != null) {
-                        for (int index = 0; index < treasures.size(); index++) {
-                            final double treasureLat = treasures.get(index).getLatitude();
-                            final double treasureLng = treasures.get(index).getLongitude();
-                            // 보물 획득 확인
-                            if (checkGetTreasure(treasureLat, treasureLng)) {
-                                Snackbar.make(getView(), R.string.get_flag, Snackbar.LENGTH_LONG)
-                                        .setAction(R.string.open, null).show();
-                                mDBManager.deleteTreasure(treasureLat, treasureLng);
-                                mDBManager.increaseNumFlags(1);
-                                mTreasureManager.displayTreasure(bounds, mMap);
-                                displayNumFlags();
-                            }
-                        }
+            if (mCheckingDistance >= 0.1 || mFirstStart) {
+                mTreasureManager.createTreasure(bounds, mMap);
+                mWalkingDistancePrefEditor
+                        .putFloat(PrefConst.CHECKING_DISTANCE, 0)
+                        .apply();
+                mCheckingDistance = 0;
+                mFirstStart = false;
+            }
+            List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
+            if (treasures != null) {
+                for (int index = 0; index < treasures.size(); index++) {
+                    final double treasureLat = treasures.get(index).getLatitude();
+                    final double treasureLng = treasures.get(index).getLongitude();
+                    // 보물 획득 확인
+                    if (checkGetTreasure(treasureLat, treasureLng)) {
+                        Snackbar.make(getView(), "깃발 획득", Snackbar.LENGTH_LONG)
+                                .setAction("꽂기", null).show();
+                        mDBManager.deleteTreasure(treasureLat, treasureLng);
+                        mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, mMember.getNumFlags() + 1)
+                                .apply();
+                        mMember.setNumFlags(mMember.getNumFlags() + 1);
+                        mTreasureManager.displayTreasure(bounds, mMap);
+                        displayNumFlags();
                     }
                 }
-                mCameraMoveStarted = false;
             }
+
+//            if (walkState) {
+//
+//            }
+            mCameraMoveStarted = false;
         }
     }
 
     @Override
     public void onLocationChanged(Location location) {
-//        Log.i("LocationChanged", "Latitude: " + location.getLatitude()
-//                + ", Longitude: " + location.getLongitude());
-//        Toast.makeText(getContext(), "Latitude: " + location.getLatitude()
-//                + ", Longitude: " + location.getLongitude(), Toast.LENGTH_SHORT).show();
-
         // 현재 위치와 이전 위치 저장
         if (mPrevLatLng == null) {
-            mPrevLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-            mCurrLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            mPrevLatLng = new com.google.maps.model.LatLng(
+                    location.getLatitude(), location.getLongitude());
+            mCurrLatLng = new com.google.maps.model.LatLng(
+                    location.getLatitude(), location.getLongitude());
         } else {
             mPrevLatLng.lat = mCurrLatLng.lat;
             mPrevLatLng.lng = mCurrLatLng.lng;
@@ -359,33 +389,45 @@ public class MapViewFragment extends Fragment implements
             mCurrLatLng.lng = location.getLongitude();
         }
 
-        Log.d("mylocation", "prev:" + mPrevLatLng.lat + ", " + mPrevLatLng.lng
-                + "  curr:" + mCurrLatLng.lat + ", " + mCurrLatLng.lng);
+        if (mPrevLatLng.lat != mCurrLatLng.lat && mPrevLatLng.lng != mCurrLatLng.lng) {
+            double movedDistance = calDistance(mPrevLatLng.lat, mPrevLatLng.lng,
+                    mCurrLatLng.lat, mCurrLatLng.lng);
+            // 100m 체크 이동거리 업데이트
+            mCheckingDistance += movedDistance;
+            mWalkingDistancePrefEditor
+                    .putFloat(PrefConst.CHECKING_DISTANCE, (float) mCheckingDistance)
+                    .apply();
+
+            // 오늘 이동거리 초기화
+            if (!isLastUpdatedDateToday()) {
+                mWalkingDistancePrefEditor.putFloat(PrefConst.TODAY_DISTANCE, 0).apply();
+            }
+            // 이동거리 업데이트
+            mTotalDistance += movedDistance;
+            if (movedDistance > 0) {
+                mWalkingDistancePrefEditor.putFloat(PrefConst.TODAY_DISTANCE,
+                        mWalkingDistancePref.getFloat(PrefConst.TODAY_DISTANCE, 0) +
+                                (float) movedDistance)
+                        .apply();
+                mWalkingDistancePrefEditor.putFloat(PrefConst.TOTAL_DISTANCE,
+                        mWalkingDistancePref.getFloat(PrefConst.TOTAL_DISTANCE, 0) +
+                                (float) movedDistance)
+                        .apply();
+            }
+        }
 
         if (walkState) {
-            if (mPrevLatLng.lat != mCurrLatLng.lat && mPrevLatLng.lng != mCurrLatLng.lng) {
-                double movedDistance = calDistance(mPrevLatLng.lat, mPrevLatLng.lng,
-                        mCurrLatLng.lat, mCurrLatLng.lng);
-                mTotalDistance += movedDistance;
-                mCheckingDistance += movedDistance;
-
-                // 이동거리 업데이트
-                if (!checkLastUpdateDateIsToday()) mDBManager.initTodayDistance();
-                if (movedDistance > 0) mDBManager.updateDistance(movedDistance);
-
-                Log.d("distance", String.valueOf(movedDistance));
-            }
-
             // 이동거리 및 칼로리 디스플레이
             mDistanceTV.setText(String.format(Locale.getDefault(), "%.2f", mTotalDistance));
             mStepTV.setText(String.format(Locale.getDefault(), "%.2f",
-                    calKcal(mUser.getWeight(), mTotalDistance)));
+                    calKcal(mMember.getWeight(), mTotalDistance)));
 
-            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            endLatLng = new com.google.maps.model.LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
-            ArrayList<com.google.android.gms.maps.model.LatLng> path = mRoadTracker.getJsonData(startLatLng, endLatLng);
+            ArrayList<com.google.android.gms.maps.model.LatLng> path =
+                    mRoadTracker.getJsonData(startLatLng, endLatLng);
             if (path == null) {
-                Toast.makeText(getContext(), "거리가 너무 짧습니다", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getContext(), "거리가 너무 짧습니다", Toast.LENGTH_SHORT).show();
                 return;
             }
             walkAllPath.addAll(path);
@@ -394,14 +436,12 @@ public class MapViewFragment extends Fragment implements
             startLatLng = endLatLng;
 
             if (mCurrentMarker != null) mCurrentMarker.remove();
-
             mCurrentMarker = addMarker(path.get(path.size() - 1).latitude, path.get(path.size() - 1).longitude);
-
         } else {
             if (mCurrentMarker != null) mCurrentMarker.remove();
             mCurrentMarker = addMarker(location.getLatitude(), location.getLongitude());
-
         }
+
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                 new com.google.android.gms.maps.model.LatLng(location.getLatitude(),
                         location.getLongitude()), ZOOM));
@@ -424,6 +464,15 @@ public class MapViewFragment extends Fragment implements
         }
     }
 
+    public void putFlag() {
+        long lLatitude = (long) (mCurrLatLng.lat * Math.pow(10, 14));
+        long lLongitude = (long) (mCurrLatLng.lng * Math.pow(10, 14));
+        double latitude = (lLatitude - (lLatitude % ZoneConst.LAT_INTERVAL)) / Math.pow(10, 14);
+        double longitude = (lLongitude - (lLongitude % ZoneConst.LNG_INTERVAL)) / Math.pow(10, 14);
+
+        new HttpCheckZoneTask().execute(latitude, longitude);
+    }
+
     public void changeWalkState() {
         walkState = !walkState;
     }
@@ -436,7 +485,7 @@ public class MapViewFragment extends Fragment implements
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
         currentDate = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date());
-        startLatLng = new LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
+        startLatLng = new com.google.maps.model.LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
 
         if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
         if (mUpdateTimeTimer == null) {
@@ -470,7 +519,6 @@ public class MapViewFragment extends Fragment implements
         mDBManager.insertWalking(walk);
         mMap.clear();
 
-
         mHours = 0;
         mMinutes = 0;
         mSeconds = 0;
@@ -487,15 +535,14 @@ public class MapViewFragment extends Fragment implements
     }
 
     private void displayNumFlags() {
-        mNumFlagsTV.setText(String.valueOf(mDBManager.selectNumFlags()));
+        mNumFlagsTV.setText(String.valueOf(mUserPref.getInt(PrefConst.NUM_FLAGS, 0)));
     }
 
-    private boolean checkLastUpdateDateIsToday() {
-        String lastUpdateDate = mDBManager.selectDate();
-        String currentDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
+    private boolean isLastUpdatedDateToday() {
+        String lastUpdatedDate = mWalkingDistancePref.getString(PrefConst.LAST_UPDATED_DATE, "");
+        String todayDate = new SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(new Date());
 
-        if (lastUpdateDate.equals(currentDate)) return true;
-        else return false;
+        return lastUpdatedDate.equals(todayDate);
     }
 
     private boolean checkGetTreasure(final double treasureLat, final double treasureLng) {
@@ -589,89 +636,110 @@ public class MapViewFragment extends Fragment implements
 
     }
 
-    private void drawZones(LatLngBounds bounds) {
-        long mapSouthwestLat = (long) (bounds.southwest.latitude * Math.pow(10, 14));
-        long mapSouthwestLng = (long) (bounds.southwest.longitude * Math.pow(10, 14));
+    private class HttpCheckZoneTask extends AsyncTask<Double, Void, String> {
 
-        double southwestLat = (mapSouthwestLat - (mapSouthwestLat % L_LAT_INTERVAL)) / Math.pow(10, 14);
-        double southwestLng = (mapSouthwestLng - (mapSouthwestLng % L_LNG_INTERVAL)) / Math.pow(10, 14);
-        double northeastLat = southwestLat + D_LAT_INTERVAL;
-        double northeastLng = southwestLng + D_LNG_INTERVAL;
+        private static final String MSG_ALREADY_YOURS = "이미 소유 중인 구역입니다.";
+        private static final String MSG_NOT_ENOUGH_FLAGS = "깃발이 부족합니다.";
+        private static final String MSG_ERROR = "깃발을 꽂지 못했습니다.";
 
-//        com.google.android.gms.maps.model.LatLng southwest =
-//                new com.google.android.gms.maps.model.LatLng(southwestLat, southwestLng);
-//        com.google.android.gms.maps.model.LatLng southeast =
-//                new com.google.android.gms.maps.model.LatLng(southwestLat, northeastLng);
-//        com.google.android.gms.maps.model.LatLng northeast =
-//                new com.google.android.gms.maps.model.LatLng(northeastLat, northeastLng);
-//        com.google.android.gms.maps.model.LatLng northwest =
-//                new com.google.android.gms.maps.model.LatLng(northeastLat, southwestLng);
+        private ProgressDialog mProgressDialog;
 
-        double currSouthwestLng = southwestLng;
-        double currNortheastLng = northeastLng;
-        while (currSouthwestLng <= bounds.northeast.longitude) {
-            double currSouthwestLat = southwestLat;
-            double currNortheastLat = northeastLat;
-            while (currSouthwestLat <= bounds.northeast.latitude) {
-                com.google.android.gms.maps.model.LatLng southwest =
-                        new com.google.android.gms.maps.model.LatLng(
-                                currSouthwestLat, currSouthwestLng);
-                com.google.android.gms.maps.model.LatLng northeast =
-                        new com.google.android.gms.maps.model.LatLng(
-                                currNortheastLat, currNortheastLng);
-                drawZone(new LatLngBounds(southwest, northeast));
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mProgressDialog = new ProgressDialog(getContext());
+            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            mProgressDialog.setMessage("구역 체크 중...");
+            mProgressDialog.show();
+        }
 
-                currSouthwestLat += D_LAT_INTERVAL;
-                currNortheastLat += D_LAT_INTERVAL;
+        @Override
+        protected String doInBackground(Double... params) {
+            HttpURLConnection conn = null;
+            JSONObject zoneJObject = null;
+            try {
+                conn = (HttpURLConnection) new URL(HttpConst.SERVER_URL + "/checkzone/index.jsp")
+                        .openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                JSONObject dataJObject = new JSONObject();
+                dataJObject.put("latitude", params[0]);
+                dataJObject.put("longitude", params[1]);
+                writer.write(JSONManager.getPostDataString(dataJObject));
+                writer.flush();
+                os.close();
+                writer.close();
+
+                Log.d("testTag", "checkZone lat: " + params[0] + ", lng: " + params[1]);
+
+                InputStream is = conn.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                String zoneJString = reader.readLine();
+                zoneJObject = new JSONObject(zoneJString);
+                is.close();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect();
             }
 
-            currSouthwestLng += D_LNG_INTERVAL;
-            currNortheastLng += D_LNG_INTERVAL;
-        }
-    }
+            try {
+                if (zoneJObject != null) {
+                    if (zoneJObject.length() == 0) {
+                        if (mMember.getNumFlags() >= 1) {
+                            return new JSONObject()
+                                    .put("latitude", params[0])
+                                    .put("longitude", params[1])
+                                    .put("numFlags", 1)
+                                    .put("userid", mMember.getId())
+                                    .toString();
+                        } else {
+                            return MSG_NOT_ENOUGH_FLAGS;
+                        }
+                    } else if (zoneJObject.getString("userid").equals(mMember.getId())) {
+                        return MSG_ALREADY_YOURS;
+                    } else if (zoneJObject.getInt("numFlags") > mMember.getNumFlags()) {
+                        return MSG_NOT_ENOUGH_FLAGS;
+                    } else {
+                        return new JSONObject()
+                                .put("latitude", params[0])
+                                .put("longitude", params[1])
+                                .put("numFlags", zoneJObject.getInt("numFlags") + 1)
+                                .put("userid", mMember.getId())
+                                .toString();
+                    }
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
-    private void drawZone(LatLngBounds zoneBounds) {
-        com.google.android.gms.maps.model.LatLng southwest = zoneBounds.southwest;
-        com.google.android.gms.maps.model.LatLng northeast = zoneBounds.northeast;
-        com.google.android.gms.maps.model.LatLng southeast =
-                new com.google.android.gms.maps.model.LatLng(
-                        southwest.latitude, northeast.longitude);
-        com.google.android.gms.maps.model.LatLng northwest =
-                new com.google.android.gms.maps.model.LatLng(
-                        northeast.latitude, southwest.longitude);
-
-        mMap.addPolygon(new PolygonOptions()
-                .add(southwest, southeast, northeast, northwest));
-    }
-
-    // { bounds :
-    //   { southwest : { latitude : x, longitude : y }, northeast : { latitude : x, longitue : y } }
-    // }
-
-    private com.google.android.gms.maps.model.LatLng getZoneSouthwest(
-            com.google.android.gms.maps.model.LatLng currLatLng) {
-        double southwestLat = (currLatLng.latitude - (currLatLng.latitude % L_LAT_INTERVAL)) /
-                Math.pow(10, 14);
-        double southwestLng = (currLatLng.longitude - (currLatLng.longitude % L_LNG_INTERVAL)) /
-                Math.pow(10, 14);
-
-        return new com.google.android.gms.maps.model.LatLng(southwestLat, southwestLng);
-    }
-
-    public void putFlag() {
-        long lLatitude = (long) (mCurrLatLng.lat * Math.pow(10, 14));
-        long lLongitude = (long) (mCurrLatLng.lng * Math.pow(10, 14));
-        double latitude = (lLatitude - (lLatitude % L_LAT_INTERVAL)) / Math.pow(10, 14);
-        double longitude = (lLongitude - (lLongitude % L_LAT_INTERVAL)) / Math.pow(10, 14);
-
-        try {
-            JSONObject zoneJObject = DataManager.createZoneJSONObject(latitude, longitude);
-            mConnectionTask.sendMessage(zoneJObject.toString());
-        } catch (JSONException e) {
-            e.printStackTrace();
+            return null;
         }
 
-        drawZone(mMap.getProjection().getVisibleRegion().latLngBounds);
+        @Override
+        protected void onPostExecute(String message) {
+            mProgressDialog.dismiss();
+            if (message == null) {
+                Toast.makeText(getContext(), MSG_ERROR, Toast.LENGTH_SHORT).show();
+            } else if (message.equals(MSG_ALREADY_YOURS) || message.equals(MSG_NOT_ENOUGH_FLAGS)) {
+                Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+            } else {
+                try {
+                    PutFlagDialogFragment
+                            .newInstance(getContext(),
+                                    JSONManager.parseZoneJSON(new JSONObject(message)))
+                            .show(getChildFragmentManager(), "putFlag");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
     }
 
     private class ConnectionTask extends AsyncTask<Void, Void, TCPClient>
@@ -712,7 +780,7 @@ public class MapViewFragment extends Fragment implements
                 result.stopClient();
 //                Log.d(TAG, "Stopped");
             }
-//            mHandler.sendEmptyMessageDelayed(MainActivity.SENT, 4000);
+//            mHandler.sendEmptyMessageDelayed(MapActivity.SENT, 4000);
         }
 
         @Override
@@ -725,11 +793,11 @@ public class MapViewFragment extends Fragment implements
 //                mTCPClient.sendMessage(COMMAND);
 //                mTCPClient.stopClient();
 //                mTCPClient.stop();
-//                mHandler.sendEmptyMessageDelayed(MainActivity.SHUTDOWN, 2000);
+//                mHandler.sendEmptyMessageDelayed(MapActivity.SHUTDOWN, 2000);
 
 //            } else {
 //                mTCPClient.sendMessage("wrong");
-//                mHandler.sendEmptyMessageDelayed(MainActivity.ERROR, 2000);
+//                mHandler.sendEmptyMessageDelayed(MapActivity.ERROR, 2000);
 //                mTCPClient.stopClient();
 //            }
         }

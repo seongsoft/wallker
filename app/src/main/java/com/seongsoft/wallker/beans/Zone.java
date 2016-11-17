@@ -1,10 +1,13 @@
 package com.seongsoft.wallker.beans;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 /**
  * Created by BeINone on 2016-10-19.
  */
 
-public class Zone {
+public class Zone implements Parcelable {
 
     private double latitude;
     private double longitude;
@@ -16,6 +19,13 @@ public class Zone {
         setLongitude(longitude);
         setNumFlags(numFlags);
         setUserid(userid);
+    }
+
+    public Zone(Parcel in) {
+        latitude = in.readDouble();
+        longitude = in.readDouble();
+        numFlags = in.readInt();
+        userid = in.readString();
     }
 
     public void setLatitude(double latitude) {
@@ -49,5 +59,30 @@ public class Zone {
     public String getUserid() {
         return userid;
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeDouble(latitude);
+        dest.writeDouble(longitude);
+        dest.writeInt(numFlags);
+        dest.writeString(userid);
+    }
+
+    public static final Creator<Zone> CREATOR = new Creator<Zone>() {
+        @Override
+        public Zone createFromParcel(Parcel source) {
+            return new Zone(source);
+        }
+
+        @Override
+        public Zone[] newArray(int size) {
+            return new Zone[size];
+        }
+    };
 
 }
