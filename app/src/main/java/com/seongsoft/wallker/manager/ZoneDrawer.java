@@ -3,6 +3,7 @@ package com.seongsoft.wallker.manager;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -155,20 +156,30 @@ public class ZoneDrawer {
                 OutputStream os = conn.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
                 JSONObject dataJObject = new JSONObject();
-                dataJObject.put("latitude", ((LatLngBounds) params[0]).southwest.latitude);
-                dataJObject.put("longitude", ((LatLngBounds) params[0]).southwest.longitude);
+                dataJObject.put("latitude", params[0].southwest.latitude);
+                dataJObject.put("longitude", params[0].southwest.longitude);
                 writer.write(JSONManager.getPostDataString(dataJObject));
                 writer.flush();
                 os.close();
                 writer.close();
 
-                InputStream is = conn.getInputStream();
+                int responseCode = conn.getResponseCode();
+
+//                InputStream is = conn.getInputStream();
+                InputStream is = null;
+                if (responseCode >= 400) {
+                    is = conn.getErrorStream();
+                } else {
+                    is = conn.getInputStream();
+                }
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 String zoneJString = reader.readLine();
+                Log.d("testTag", zoneJString);
                 zoneJObject = new JSONObject(zoneJString);
                 is.close();
                 reader.close();
             } catch (Exception e) {
+                Log.d("testTag", e.getMessage());
                 e.printStackTrace();
             } finally {
                 if (conn != null) conn.disconnect();

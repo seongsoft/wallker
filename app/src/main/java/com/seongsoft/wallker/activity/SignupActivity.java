@@ -109,6 +109,7 @@ public class SignupActivity extends AppCompatActivity {
                 conn.setRequestMethod("POST");
                 conn.setDoInput(true);
                 conn.setDoOutput(true);
+                conn.setReadTimeout(100000);
 
                 OutputStream os = conn.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));

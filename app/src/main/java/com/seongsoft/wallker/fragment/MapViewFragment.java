@@ -147,8 +147,8 @@ public class MapViewFragment extends Fragment implements
     private boolean walkState = false;
     private RoadTracker mRoadTracker;
     private ArrayList<LatLng> mCheckedLocations = new ArrayList<>();        //지나간 좌표 들을 저장하는 List
-    private com.google.maps.model.LatLng startLatLng = new com.google.maps.model.LatLng(0, 0);
-    private com.google.maps.model.LatLng endLatLng = new com.google.maps.model.LatLng(0, 0);
+    private LatLng startLatLng = new LatLng(0, 0);
+    private LatLng endLatLng = new LatLng(0, 0);
 
     private boolean mPermissionDenied;
     private boolean mCameraMoveStarted;
@@ -238,9 +238,9 @@ public class MapViewFragment extends Fragment implements
             }
         });
 
-        mNumFlagsCV = (CardView) v.findViewById(R.id.cv_num_flags);
-        mNumFlagsCV.setAlpha(0.5f);
-        mNumFlagsCV.setVisibility(View.INVISIBLE);
+//        mNumFlagsCV = (CardView) v.findViewById(R.id.cv_num_flags);
+//        mNumFlagsCV.setAlpha(0.5f);
+//        mNumFlagsCV.setVisibility(View.INVISIBLE);
         mTimeCV = (CardView) v.findViewById(R.id.cv_time);
         mTimeCV.setAlpha(0.5f);
         mTimeCV.setVisibility(View.INVISIBLE);
@@ -340,6 +340,7 @@ public class MapViewFragment extends Fragment implements
             final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             mZoneDrawer.drawZones(bounds);
 
+            Log.d("testTag", "checkingDistance: " + mCheckingDistance);
             if (mCheckingDistance >= 0.1 || mFirstStart) {
                 mTreasureManager.createTreasure(bounds, mMap);
                 mWalkingDistancePrefEditor
@@ -358,9 +359,10 @@ public class MapViewFragment extends Fragment implements
                         Snackbar.make(getView(), "깃발 획득", Snackbar.LENGTH_LONG)
                                 .setAction("꽂기", null).show();
                         mDBManager.deleteTreasure(treasureLat, treasureLng);
-                        mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, mMember.getNumFlags() + 1)
-                                .apply();
-                        mMember.setNumFlags(mMember.getNumFlags() + 1);
+                        int resultNumFlags = mMember.getNumFlags() + 1;
+                        mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, resultNumFlags).apply();
+                        mMember.setNumFlags(resultNumFlags);
+                        new HttpUpdateNumFlagsTask().execute(mMember);
                         mTreasureManager.displayTreasure(bounds, mMap);
                         displayNumFlags();
                     }
@@ -422,7 +424,7 @@ public class MapViewFragment extends Fragment implements
             mStepTV.setText(String.format(Locale.getDefault(), "%.2f",
                     calKcal(mMember.getWeight(), mTotalDistance)));
 
-            endLatLng = new com.google.maps.model.LatLng(location.getLatitude(), location.getLongitude());
+            endLatLng = new LatLng(location.getLatitude(), location.getLongitude());
             mCheckedLocations.add(new LatLng(location.getLatitude(), location.getLongitude()));
             ArrayList<com.google.android.gms.maps.model.LatLng> path =
                     mRoadTracker.getJsonData(startLatLng, endLatLng);
@@ -485,7 +487,7 @@ public class MapViewFragment extends Fragment implements
         mRoadTracker = new RoadTracker(mMap);
         walk_name = name;
         currentDate = new SimpleDateFormat("yyyy-MM-dd-HH-mm").format(new Date());
-        startLatLng = new com.google.maps.model.LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
+        startLatLng = new LatLng(mCurrLatLng.lat, mCurrLatLng.lng);
 
         if (mUpdateTimeTask == null) mUpdateTimeTask = new UpdateTimeTask();
         if (mUpdateTimeTimer == null) {
@@ -535,7 +537,7 @@ public class MapViewFragment extends Fragment implements
     }
 
     private void displayNumFlags() {
-        mNumFlagsTV.setText(String.valueOf(mUserPref.getInt(PrefConst.NUM_FLAGS, 0)));
+        mNumFlagsTV.setText(String.valueOf(mMember.getNumFlags()));
     }
 
     private boolean isLastUpdatedDateToday() {
@@ -731,12 +733,158 @@ public class MapViewFragment extends Fragment implements
             } else {
                 try {
                     PutFlagDialogFragment
-                            .newInstance(getContext(),
-                                    JSONManager.parseZoneJSON(new JSONObject(message)))
+                            .newInstance(JSONManager.parseZoneJSON(new JSONObject(message)),
+                                    new PutFlagDialogFragment.OnOKButtonClickListener() {
+                                        @Override
+                                        public void onOKButtonClick(Zone zone) {
+                                            new HttpPutFlagTask().execute(zone);
+                                        }
+                                    })
                             .show(getChildFragmentManager(), "putFlag");
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+
+    }
+
+    private class HttpPutFlagTask extends AsyncTask<Zone, Void, String> {
+
+        private static final String MSG_SUCCEED = "깃발을 꽂았습니다.";
+        private static final String MSG_FAILED = "한 발 늦었습니다.";
+        private static final String MSG_ERROR = "깃발을 꽂지 못했습니다.";
+
+        private ProgressDialog mProgressDialog;
+        private int usedNumFlags;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mProgressDialog = new ProgressDialog(getContext());
+            mProgressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+            mProgressDialog.setMessage("깃발 꽂는 중...");
+            mProgressDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(Zone... params) {
+            HttpURLConnection conn = null;
+            String result = null;
+            usedNumFlags = params[0].getNumFlags();
+            try {
+                conn = (HttpURLConnection) new URL(HttpConst.SERVER_URL + "/putflag/index.jsp")
+                        .openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                JSONObject dataJObject = new JSONObject();
+                dataJObject.put("latitude", params[0].getLatitude());
+                dataJObject.put("longitude", params[0].getLongitude());
+                dataJObject.put("numFlags", params[0].getNumFlags());
+                dataJObject.put("userid", params[0].getUserid());
+                writer.write(JSONManager.getPostDataString(dataJObject));
+                writer.flush();
+                os.close();
+                writer.close();
+
+                InputStream is = conn.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                result = reader.readLine();
+                is.close();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+
+            if (result != null) {
+                switch (result) {
+                    case "succeed":
+                        return MSG_SUCCEED;
+                    case "failed":
+                        return MSG_FAILED;
+                    case "error":
+                        return MSG_ERROR;
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String message) {
+            mProgressDialog.dismiss();
+            if (message == null) {
+                Toast.makeText(mContext, MSG_ERROR, Toast.LENGTH_SHORT).show();
+            } else {
+                if (message.equals(MSG_SUCCEED)) {
+                    int resultNumFlags = mMember.getNumFlags() - usedNumFlags;
+                    mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, resultNumFlags).apply();
+                    mMember.setNumFlags(resultNumFlags);
+                    new HttpUpdateNumFlagsTask().execute(mMember);
+                }
+                Toast.makeText(mContext, message, Toast.LENGTH_SHORT).show();
+            }
+        }
+
+    }
+
+    private class HttpUpdateNumFlagsTask extends AsyncTask<Member, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+        }
+
+        @Override
+        protected String doInBackground(Member... params) {
+            HttpURLConnection conn = null;
+            String result = null;
+            try {
+                conn = (HttpURLConnection) new URL(HttpConst.SERVER_URL +
+                        "/updatenumflags/index.jsp")
+                        .openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+
+                OutputStream os = conn.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                JSONObject dataJObject = new JSONObject();
+                dataJObject.put("id", params[0].getId());
+                dataJObject.put("numFlags", params[0].getNumFlags());
+                writer.write(JSONManager.getPostDataString(dataJObject));
+                writer.flush();
+                os.close();
+                writer.close();
+
+                InputStream is = conn.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+                result = reader.readLine();
+                is.close();
+                reader.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(String message) {
+            if (message == null) {
+                Toast.makeText(getContext(), "깃발 수를 업데이트하지 못했습니다.",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                Log.d("testTag", "updatenumflags: " + message);
             }
         }
 

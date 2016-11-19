@@ -15,6 +15,7 @@ import com.google.maps.GeoApiContext;
 import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.utils.BitmapUtils;
+import com.seongsoft.wallker.utils.RoadTracker;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,14 +45,19 @@ public class TreasureManager {
         final double latitudeRange = bounds.northeast.latitude - bounds.southwest.latitude;
         final double longitudeRange = bounds.northeast.longitude - bounds.southwest.longitude;
 
-        double latitude = bounds.southwest.latitude + (latitudeRange * Math.random());
-        double longitude = bounds.southwest.longitude + (longitudeRange * Math.random());
-//        com.google.maps.model.LatLng tresLatLng = new com.google.maps.model.LatLng(latitude, longitude);
-//        ArrayList<com.google.android.gms.maps.model.LatLng> points = new RoadTracker(map).getJsonData(tresLatLng, latLng);
-        Treasure treasure = new Treasure(latitude, longitude);
+        double tresLatitude = bounds.southwest.latitude + (latitudeRange * Math.random());
+        double tresLongitude = bounds.southwest.longitude + (longitudeRange * Math.random());
+        LatLng tresLatLng = new LatLng(tresLatitude, tresLongitude);
+
+        double anyLatitude = tresLatitude + 0.001;
+        double anyLongitude = tresLongitude + 0.001;
+        LatLng anyLatLng = new LatLng(anyLatitude, anyLongitude);
+
+        ArrayList<LatLng> points = new RoadTracker(map).getJsonData(tresLatLng, anyLatLng);
+        Treasure treasure = new Treasure(tresLatitude, tresLongitude);
         mDBManager.insertTreasure(treasure);
 
-        displayTreasure(new LatLng(latitude, longitude), map);
+        displayTreasure(new LatLng(tresLatitude, tresLongitude), map);
     }
 
     public ArrayList<Treasure> displayTreasure(LatLngBounds bounds, GoogleMap map) {

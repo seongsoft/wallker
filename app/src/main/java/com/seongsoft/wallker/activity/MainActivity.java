@@ -13,6 +13,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+//        getSharedPreferences(PrefConst.APP_INFO_PREF, 0).edit().clear().apply();
+//        getSharedPreferences(PrefConst.USER_PREF, 0).edit().clear().apply();
+//        getSharedPreferences(PrefConst.WALKING_DISTANCE_PREF, 0).edit().clear().apply();
+
         SharedPreferences loginPref = getSharedPreferences(PrefConst.USER_PREF, 0);
         if (!loginPref.getString(PrefConst.ID, "").equals("")) {
             startActivity(new Intent(MainActivity.this, MapActivity.class));

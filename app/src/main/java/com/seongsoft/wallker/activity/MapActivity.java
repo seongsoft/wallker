@@ -46,7 +46,7 @@ public class MapActivity extends AppCompatActivity implements
 
         mWalkingDistancePref = getSharedPreferences(PrefConst.WALKING_DISTANCE_PREF, 0);
 
-        deleteDatabase("wallker.db");
+//        deleteDatabase("wallker.db");
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
