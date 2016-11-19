@@ -29,7 +29,8 @@ public class LogoutDialogFragment extends DialogFragment {
                                 .remove(PrefConst.ID)
                                 .remove(PrefConst.PASSWORD)
                                 .remove(PrefConst.WEIGHT)
-                                .remove(PrefConst.NUM_FLAGS);
+                                .remove(PrefConst.NUM_FLAGS)
+                                .apply();
                         startActivity(new Intent(getContext(), LoginActivity.class));
                         getActivity().finish();
                     }
