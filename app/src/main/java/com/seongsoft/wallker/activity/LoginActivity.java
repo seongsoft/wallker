@@ -32,8 +32,8 @@ import java.net.URL;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private SharedPreferences mLoginPref;
-    private SharedPreferences.Editor mPrefEditor;
+    private SharedPreferences mUserPref;
+    private SharedPreferences.Editor mUserPrefEditor;
 
     private EditText mIDEditText;
     private EditText mPasswordEditText;
@@ -45,8 +45,8 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        mLoginPref = getSharedPreferences(PrefConst.USER_PREF, 0);
-        mPrefEditor = mLoginPref.edit();
+        mUserPref = getSharedPreferences(PrefConst.USER_PREF, 0);
+        mUserPrefEditor = mUserPref.edit();
 
         mIDEditText = (EditText) findViewById(R.id.et_id);
         mPasswordEditText = (EditText) findViewById(R.id.et_password);
@@ -138,7 +138,7 @@ public class LoginActivity extends AppCompatActivity {
                     if (memberJObject.length() == 0) {
                         return MSG_WRONG;
                     } else {
-                        mPrefEditor.putString(PrefConst.ID, params[0])
+                        mUserPrefEditor.putString(PrefConst.ID, params[0])
                                 .putString(PrefConst.PASSWORD, params[1])
                                 .putInt(PrefConst.WEIGHT, memberJObject.getInt("weight"))
                                 .putInt(PrefConst.NUM_FLAGS, memberJObject.getInt("numFlags"))
@@ -159,9 +159,9 @@ public class LoginActivity extends AppCompatActivity {
             if (message == null) {
                 Toast.makeText(getApplicationContext(), "로그인 실패", Toast.LENGTH_SHORT).show();
             } else if (message.equals(MSG_SUCCEED)) {
-                Toast.makeText(getApplicationContext(),
-                        mLoginPref.getString("id", "") + "님, 환영합니다.",
-                        Toast.LENGTH_SHORT).show();
+//                Toast.makeText(getApplicationContext(),
+//                        mUserPref.getString(PrefConst.ID, "") + "님, 환영합니다.",
+//                        Toast.LENGTH_SHORT).show();
                 startActivity(new Intent(LoginActivity.this, MapActivity.class));
                 finish();
             } else if (message.equals(MSG_WRONG)) {

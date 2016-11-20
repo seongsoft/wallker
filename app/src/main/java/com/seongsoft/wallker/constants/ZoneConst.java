@@ -6,7 +6,16 @@ package com.seongsoft.wallker.constants;
 
 public class ZoneConst {
 
-    public static final long LAT_INTERVAL = 261688764829L;
-    public static final long LNG_INTERVAL = 340909090909L;
+    /*
+        100m
+        Latitude Interval: 0.00087229588276
+        Longitude Interval: 0.11363636363636
+        300m
+        Latitude Interval: 0.00261688764829
+        Longitude Interval: 0.00340909090909
+     */
+
+    public static final long LAT_INTERVAL = 87229588276L;
+    public static final long LNG_INTERVAL = 113636363636L;
 
 }

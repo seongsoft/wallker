@@ -1,6 +1,5 @@
 package com.seongsoft.wallker.manager;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
 
@@ -30,7 +29,6 @@ public class TreasureManager {
     private Context mContext;
     private GeoApiContext mGeoApiContext;
     private DatabaseManager mDBManager;
-    private ProgressDialog mDialog;
 
     private List<GroundOverlay> mFlags;
 

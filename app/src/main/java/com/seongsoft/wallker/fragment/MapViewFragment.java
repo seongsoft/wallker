@@ -96,11 +96,6 @@ public class MapViewFragment extends Fragment implements
         GoogleMap.OnCameraIdleListener,
         LocationListener {
 
-    /*
-        Latitude Interval: 0.00261688764829
-        Longitude Interval: 0.00340909090909
-     */
-
     private static final String IP = "10.156.145.88";
     private static final int PORT = 52925;
     public static final float ZOOM = 18.0f;
@@ -208,6 +203,10 @@ public class MapViewFragment extends Fragment implements
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_map, container, false);
+
+        SharedPreferences loginPref = getContext().getSharedPreferences(PrefConst.USER_PREF, 0);
+        Toast.makeText(getContext(), loginPref.getString(PrefConst.ID, "") + "님, 환영합니다.",
+                Toast.LENGTH_SHORT).show();
 
         mContext = v.getContext();
         mMapView = (MapView) v.findViewById(R.id.mapview);
@@ -321,12 +320,10 @@ public class MapViewFragment extends Fragment implements
 
     @Override
     public void onConnectionSuspended(int i) {
-        Log.d("onConnectionSuspended", "");
     }
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        Log.d("onConnectionFailed", "");
     }
 
     @Override
@@ -340,7 +337,6 @@ public class MapViewFragment extends Fragment implements
             final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             mZoneDrawer.drawZones(bounds);
 
-            Log.d("testTag", "checkingDistance: " + mCheckingDistance);
             if (mCheckingDistance >= 0.1 || mFirstStart) {
                 mTreasureManager.createTreasure(bounds, mMap);
                 mWalkingDistancePrefEditor
@@ -356,8 +352,7 @@ public class MapViewFragment extends Fragment implements
                     final double treasureLng = treasures.get(index).getLongitude();
                     // 보물 획득 확인
                     if (checkGetTreasure(treasureLat, treasureLng)) {
-                        Snackbar.make(getView(), "깃발 획득", Snackbar.LENGTH_LONG)
-                                .setAction("꽂기", null).show();
+                        Snackbar.make(getView(), "깃발 획득", Snackbar.LENGTH_LONG).show();
                         mDBManager.deleteTreasure(treasureLat, treasureLng);
                         int resultNumFlags = mMember.getNumFlags() + 1;
                         mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, resultNumFlags).apply();
@@ -369,9 +364,6 @@ public class MapViewFragment extends Fragment implements
                 }
             }
 
-//            if (walkState) {
-//
-//            }
             mCameraMoveStarted = false;
         }
     }
@@ -622,6 +614,13 @@ public class MapViewFragment extends Fragment implements
         }
     }
 
+    private void updateNumFlags(int numFlags) {
+        mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, numFlags).apply();
+        mMember.setNumFlags(numFlags);
+        new HttpUpdateNumFlagsTask().execute(mMember);
+        displayNumFlags();
+    }
+
     private class UpdateTimeTask extends TimerTask {
 
         @Override
@@ -823,10 +822,8 @@ public class MapViewFragment extends Fragment implements
                 Toast.makeText(mContext, MSG_ERROR, Toast.LENGTH_SHORT).show();
             } else {
                 if (message.equals(MSG_SUCCEED)) {
-                    int resultNumFlags = mMember.getNumFlags() - usedNumFlags;
-                    mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, resultNumFlags).apply();
-                    mMember.setNumFlags(resultNumFlags);
-                    new HttpUpdateNumFlagsTask().execute(mMember);
+                    updateNumFlags(mMember.getNumFlags() - usedNumFlags);
+                    mZoneDrawer.drawZones(mMap.getProjection().getVisibleRegion().latLngBounds);
                 }
                 Toast.makeText(mContext, message, Toast.LENGTH_SHORT).show();
             }

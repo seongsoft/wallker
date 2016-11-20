@@ -9,6 +9,9 @@ import com.seongsoft.wallker.constants.PrefConst;
 
 public class MainActivity extends AppCompatActivity {
 
+    SharedPreferences mUserPref;
+    SharedPreferences.Editor mUserPrefEditor;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -17,11 +20,11 @@ public class MainActivity extends AppCompatActivity {
 //        getSharedPreferences(PrefConst.USER_PREF, 0).edit().clear().apply();
 //        getSharedPreferences(PrefConst.WALKING_DISTANCE_PREF, 0).edit().clear().apply();
 
-        SharedPreferences loginPref = getSharedPreferences(PrefConst.USER_PREF, 0);
-        if (!loginPref.getString(PrefConst.ID, "").equals("")) {
-            startActivity(new Intent(MainActivity.this, MapActivity.class));
-        } else {
+        mUserPref = getSharedPreferences(PrefConst.USER_PREF, 0);
+        if (mUserPref.getString(PrefConst.ID, "").equals("")) {
             startActivity(new Intent(MainActivity.this, LoginActivity.class));
+        } else {
+            startActivity(new Intent(MainActivity.this, MapActivity.class));
         }
         finish();
     }
