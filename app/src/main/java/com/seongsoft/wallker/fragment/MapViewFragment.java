@@ -19,7 +19,6 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,12 +47,10 @@ import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.beans.Member;
 import com.seongsoft.wallker.beans.Treasure;
 import com.seongsoft.wallker.beans.Walking;
-import com.seongsoft.wallker.beans.Zone;
 import com.seongsoft.wallker.constants.HttpConst;
 import com.seongsoft.wallker.constants.PrefConst;
 import com.seongsoft.wallker.constants.ZoneConst;
 import com.seongsoft.wallker.dialog.PutFlagDialogFragment;
-import com.seongsoft.wallker.manager.DataManager;
 import com.seongsoft.wallker.manager.DatabaseManager;
 import com.seongsoft.wallker.manager.JSONManager;
 import com.seongsoft.wallker.manager.TreasureManager;
@@ -61,7 +58,6 @@ import com.seongsoft.wallker.manager.ZoneDrawer;
 import com.seongsoft.wallker.utils.BitmapUtils;
 import com.seongsoft.wallker.utils.PermissionUtils;
 import com.seongsoft.wallker.utils.RoadTracker;
-import com.seongsoft.wallker.utils.TCPClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -107,8 +103,6 @@ public class MapViewFragment extends Fragment implements
     private SharedPreferences mWalkingDistancePref;
     private SharedPreferences.Editor mWalkingDistancePrefEditor;
 
-    private ConnectionTask mConnectionTask;
-
     private Member mMember;
     private ZoneDrawer mZoneDrawer;
 
@@ -147,7 +141,8 @@ public class MapViewFragment extends Fragment implements
 
     private boolean mPermissionDenied;
     private boolean mCameraMoveStarted;
-    private boolean mFirstStart;
+    private boolean mFirstExecute;  // 앱 다운로드 후 첫 실행
+    private boolean mFirstStart = true;    // 앱 첫 실행
 
     private CardView mNumFlagsCV;
     private CardView mTimeCV;
@@ -172,7 +167,7 @@ public class MapViewFragment extends Fragment implements
         mWalkingDistancePref = getContext().getSharedPreferences(PrefConst.WALKING_DISTANCE_PREF, 0);
         mWalkingDistancePrefEditor = mWalkingDistancePref.edit();
 
-        if (mFirstStart = mAppInfoPref.getBoolean(PrefConst.IS_FIRST_EXECUTE, true)) {
+        if (mFirstExecute = mAppInfoPref.getBoolean(PrefConst.IS_FIRST_EXECUTE, true)) {
             mAppInfoPrefEditor.putBoolean(PrefConst.IS_FIRST_EXECUTE, false).apply();
         }
 
@@ -225,6 +220,8 @@ public class MapViewFragment extends Fragment implements
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 mMap = googleMap;
+                mMap.getUiSettings().setAllGesturesEnabled(false);
+                mMap.getUiSettings().setScrollGesturesEnabled(true);
 
                 mZoneDrawer = new ZoneDrawer(getContext(), mMap, mMember);
 
@@ -337,13 +334,13 @@ public class MapViewFragment extends Fragment implements
             final LatLngBounds bounds = mMap.getProjection().getVisibleRegion().latLngBounds;
             mZoneDrawer.drawZones(bounds);
 
-            if (mCheckingDistance >= 0.1 || mFirstStart) {
+            if (mCheckingDistance >= 0.1 || mFirstExecute) {
                 mTreasureManager.createTreasure(bounds, mMap);
                 mWalkingDistancePrefEditor
                         .putFloat(PrefConst.CHECKING_DISTANCE, 0)
                         .apply();
                 mCheckingDistance = 0;
-                mFirstStart = false;
+                mFirstExecute = false;
             }
             List<Treasure> treasures = mTreasureManager.displayTreasure(bounds, mMap);
             if (treasures != null) {
@@ -354,12 +351,8 @@ public class MapViewFragment extends Fragment implements
                     if (checkGetTreasure(treasureLat, treasureLng)) {
                         Snackbar.make(getView(), "깃발 획득", Snackbar.LENGTH_LONG).show();
                         mDBManager.deleteTreasure(treasureLat, treasureLng);
-                        int resultNumFlags = mMember.getNumFlags() + 1;
-                        mUserPrefEditor.putInt(PrefConst.NUM_FLAGS, resultNumFlags).apply();
-                        mMember.setNumFlags(resultNumFlags);
-                        new HttpUpdateNumFlagsTask().execute(mMember);
+                        updateNumFlags(mMember.getNumFlags() + 1);
                         mTreasureManager.displayTreasure(bounds, mMap);
-                        displayNumFlags();
                     }
                 }
             }
@@ -436,9 +429,12 @@ public class MapViewFragment extends Fragment implements
             mCurrentMarker = addMarker(location.getLatitude(), location.getLongitude());
         }
 
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                new com.google.android.gms.maps.model.LatLng(location.getLatitude(),
-                        location.getLongitude()), ZOOM));
+        if ((mPrevLatLng.lat != mCurrLatLng.lat && mPrevLatLng.lng != mCurrLatLng.lng) || mFirstStart) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
+                    new com.google.android.gms.maps.model.LatLng(location.getLatitude(),
+                            location.getLongitude()), ZOOM));
+            mFirstStart = false;
+        }
     }
 
     @Override
@@ -675,8 +671,6 @@ public class MapViewFragment extends Fragment implements
                 os.close();
                 writer.close();
 
-                Log.d("testTag", "checkZone lat: " + params[0] + ", lng: " + params[1]);
-
                 InputStream is = conn.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 String zoneJString = reader.readLine();
@@ -697,7 +691,7 @@ public class MapViewFragment extends Fragment implements
                                     .put("latitude", params[0])
                                     .put("longitude", params[1])
                                     .put("numFlags", 1)
-                                    .put("userid", mMember.getId())
+                                    .put("newUserid", mMember.getId())
                                     .toString();
                         } else {
                             return MSG_NOT_ENOUGH_FLAGS;
@@ -711,7 +705,8 @@ public class MapViewFragment extends Fragment implements
                                 .put("latitude", params[0])
                                 .put("longitude", params[1])
                                 .put("numFlags", zoneJObject.getInt("numFlags") + 1)
-                                .put("userid", mMember.getId())
+                                .put("oldUserid", zoneJObject.getString("userid"))
+                                .put("newUserid", mMember.getId())
                                 .toString();
                     }
                 }
@@ -732,11 +727,11 @@ public class MapViewFragment extends Fragment implements
             } else {
                 try {
                     PutFlagDialogFragment
-                            .newInstance(JSONManager.parseZoneJSON(new JSONObject(message)),
+                            .newInstance(new JSONObject(message),
                                     new PutFlagDialogFragment.OnOKButtonClickListener() {
                                         @Override
-                                        public void onOKButtonClick(Zone zone) {
-                                            new HttpPutFlagTask().execute(zone);
+                                        public void onOKButtonClick(JSONObject jsonObject) {
+                                            new HttpPutFlagTask().execute(jsonObject);
                                         }
                                     })
                             .show(getChildFragmentManager(), "putFlag");
@@ -748,7 +743,7 @@ public class MapViewFragment extends Fragment implements
 
     }
 
-    private class HttpPutFlagTask extends AsyncTask<Zone, Void, String> {
+    private class HttpPutFlagTask extends AsyncTask<JSONObject, Void, String> {
 
         private static final String MSG_SUCCEED = "깃발을 꽂았습니다.";
         private static final String MSG_FAILED = "한 발 늦었습니다.";
@@ -767,11 +762,12 @@ public class MapViewFragment extends Fragment implements
         }
 
         @Override
-        protected String doInBackground(Zone... params) {
+        protected String doInBackground(JSONObject... params) {
             HttpURLConnection conn = null;
             String result = null;
-            usedNumFlags = params[0].getNumFlags();
             try {
+                usedNumFlags = params[0].getInt("numFlags");
+
                 conn = (HttpURLConnection) new URL(HttpConst.SERVER_URL + "/putflag/index.jsp")
                         .openConnection();
                 conn.setRequestMethod("POST");
@@ -780,12 +776,7 @@ public class MapViewFragment extends Fragment implements
 
                 OutputStream os = conn.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
-                JSONObject dataJObject = new JSONObject();
-                dataJObject.put("latitude", params[0].getLatitude());
-                dataJObject.put("longitude", params[0].getLongitude());
-                dataJObject.put("numFlags", params[0].getNumFlags());
-                dataJObject.put("userid", params[0].getUserid());
-                writer.write(JSONManager.getPostDataString(dataJObject));
+                writer.write(JSONManager.getPostDataString(params[0]));
                 writer.flush();
                 os.close();
                 writer.close();
@@ -880,82 +871,7 @@ public class MapViewFragment extends Fragment implements
             if (message == null) {
                 Toast.makeText(getContext(), "깃발 수를 업데이트하지 못했습니다.",
                         Toast.LENGTH_SHORT).show();
-            } else {
-                Log.d("testTag", "updatenumflags: " + message);
             }
-        }
-
-    }
-
-    private class ConnectionTask extends AsyncTask<Void, Void, TCPClient>
-            implements TCPClient.MessageCallback {
-
-        private TCPClient mTCPClient;
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TCPClient doInBackground(Void... params) {
-//            Log.d(TAG, "In do in background");
-
-//            mTCPClient = new TCPClient(mHandler, IP, PORT,
-//                    new TCPClient.MessageCallback() {
-//                        @Override
-//                        public void callbackMessageReceiver(String message) {
-//                            Log.d(TAG, "Message receive");
-//                            List<Zone> zones = DataManager.parseMessage(message);
-//                            drawZones(zones);
-//                        }
-//                    });
-            mTCPClient = new TCPClient(this);
-            mTCPClient.run();
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(TCPClient result) {
-            super.onPostExecute(result);
-
-//            Log.d(TAG, "In on post execute");
-            if (result != null && result.isRunning()) {
-                result.stopClient();
-//                Log.d(TAG, "Stopped");
-            }
-//            mHandler.sendEmptyMessageDelayed(MapActivity.SENT, 4000);
-        }
-
-        @Override
-        protected void onProgressUpdate(Void... values) {
-            super.onProgressUpdate(values);
-
-//            Log.d(TAG, "In progress update, values: " + values.toString());
-
-//            if (values[0].equals("shutdown")) {
-//                mTCPClient.sendMessage(COMMAND);
-//                mTCPClient.stopClient();
-//                mTCPClient.stop();
-//                mHandler.sendEmptyMessageDelayed(MapActivity.SHUTDOWN, 2000);
-
-//            } else {
-//                mTCPClient.sendMessage("wrong");
-//                mHandler.sendEmptyMessageDelayed(MapActivity.ERROR, 2000);
-//                mTCPClient.stopClient();
-//            }
-        }
-
-        @Override
-        public void callbackMessageReceiver(String message) {
-//            Log.d(TAG, "Message receive");
-            List<Zone> zones = DataManager.parseMessage(message);
-//            drawZones(zones);
-        }
-
-        public void sendMessage(String message) {
-            mTCPClient.sendMessage(message);
         }
 
     }

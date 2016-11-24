@@ -3,7 +3,6 @@ package com.seongsoft.wallker.manager;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.GoogleMap;
@@ -163,23 +162,13 @@ public class ZoneDrawer {
                 os.close();
                 writer.close();
 
-                int responseCode = conn.getResponseCode();
-
-//                InputStream is = conn.getInputStream();
-                InputStream is = null;
-                if (responseCode >= 400) {
-                    is = conn.getErrorStream();
-                } else {
-                    is = conn.getInputStream();
-                }
+                InputStream is = conn.getInputStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 String zoneJString = reader.readLine();
-                Log.d("testTag", zoneJString);
                 zoneJObject = new JSONObject(zoneJString);
                 is.close();
                 reader.close();
             } catch (Exception e) {
-                Log.d("testTag", e.getMessage());
                 e.printStackTrace();
             } finally {
                 if (conn != null) conn.disconnect();
@@ -194,7 +183,7 @@ public class ZoneDrawer {
                             .put("northeastLng", params[0].northeast.longitude);
                     if (zoneJObject.length() > 0) {
                         jsonObject.put("numFlags", zoneJObject.getInt("numFlags"))
-                                .put("userid", mMember.getId());
+                                .put("userid", zoneJObject.getString("userid"));
                     }
                     return jsonObject;
                 }

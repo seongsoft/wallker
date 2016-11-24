@@ -1,6 +1,7 @@
 package com.seongsoft.wallker.manager;
 
 import com.seongsoft.wallker.beans.Member;
+import com.seongsoft.wallker.beans.Ranking;
 import com.seongsoft.wallker.beans.Zone;
 
 import org.json.JSONArray;
@@ -11,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by dsm_025 on 2016-10-04.
@@ -68,6 +70,20 @@ public class JSONManager {
         String userid = zoneJSON.getString("userid");
 
         return new Zone(latitude, longitude, numFlags, userid);
+    }
+
+    public static ArrayList<Ranking> parseRankingJSONArray(JSONArray rankingJArray) throws JSONException {
+        List<Ranking> rankings = new ArrayList<>();
+        for (int index = 0; index < rankingJArray.length(); index++) {
+            JSONObject rankingJObject = rankingJArray.getJSONObject(index);
+            int ranking = rankingJObject.getInt("ranking");
+            String id = rankingJObject.getString("id");
+            int numZones = rankingJObject.getInt("numZones");
+
+            rankings.add(new Ranking(ranking, id, numZones));
+        }
+
+        return (ArrayList<Ranking>) rankings;
     }
 
     public static String getPostDataString(JSONObject dataJSON)

@@ -19,6 +19,7 @@ import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.constants.PrefConst;
 import com.seongsoft.wallker.dialog.AddNameDialogFragment;
 import com.seongsoft.wallker.dialog.LogoutDialogFragment;
+import com.seongsoft.wallker.dialog.RankingDialogFragment;
 import com.seongsoft.wallker.fragment.MapRecordFrgment;
 import com.seongsoft.wallker.fragment.MapViewFragment;
 import com.seongsoft.wallker.manager.DatabaseManager;
@@ -149,6 +150,9 @@ public class MapActivity extends AppCompatActivity implements
 //                item.setIcon(R.drawable.ic_gps_not_fixed_white_24dp);
 //            }
 //        }
+        if (id == R.id.action_ranking) {
+            new RankingDialogFragment().show(getSupportFragmentManager(), "ranking");
+        }
 
         //noinspection SimplifiableIfStatement
 //        if (id == R.id.action_settings) {
