@@ -55,14 +55,12 @@ public class RankingDialogFragment extends DialogFragment {
         mTabLayout = (TabLayout) v.findViewById(R.id.tabs_ranking);
         mViewPager = (ViewPager) v.findViewById(R.id.viewpager_ranking);
 
+        RankingPagerAdapter adapter = new RankingPagerAdapter(getChildFragmentManager());
+        mViewPager.setAdapter(adapter);
+
         new HttpLoadRankingTask().execute();
 
         return v;
-    }
-
-    private void setupViewPager(ViewPager viewPager) {
-        RankingPagerAdapter adapter = new RankingPagerAdapter(getChildFragmentManager());
-        viewPager.setAdapter(adapter);
     }
 
     private class RankingPagerAdapter extends FragmentPagerAdapter {
