@@ -4,8 +4,12 @@ import android.app.ProgressDialog;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.DialogFragment;
-import android.support.v7.widget.LinearLayoutManager;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +20,8 @@ import android.widget.Toast;
 import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.beans.Ranking;
 import com.seongsoft.wallker.constants.HttpConst;
+import com.seongsoft.wallker.fragment.NumFlagsInZoneFragment;
+import com.seongsoft.wallker.fragment.NumZonesFragment;
 import com.seongsoft.wallker.manager.JSONManager;
 
 import org.json.JSONArray;
@@ -34,19 +40,63 @@ import java.util.List;
 
 public class RankingDialogFragment extends DialogFragment {
 
-    private RecyclerView mRecyclerView;
+//    private RecyclerView mRecyclerView;
+    private TabLayout mTabLayout;
+    private ViewPager mViewPager;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.dialog_ranking, container, false);
 
-        mRecyclerView = (RecyclerView) v.findViewById(R.id.rv_ranking);
-        mRecyclerView.setHasFixedSize(true);
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+//        mRecyclerView = (RecyclerView) v.findViewById(R.id.rv_ranking);
+//        mRecyclerView.setHasFixedSize(true);
+//        mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        mTabLayout = (TabLayout) v.findViewById(R.id.tabs_ranking);
+        mViewPager = (ViewPager) v.findViewById(R.id.viewpager_ranking);
+
         new HttpLoadRankingTask().execute();
 
         return v;
+    }
+
+    private void setupViewPager(ViewPager viewPager) {
+        RankingPagerAdapter adapter = new RankingPagerAdapter(getChildFragmentManager());
+        viewPager.setAdapter(adapter);
+    }
+
+    private class RankingPagerAdapter extends FragmentPagerAdapter {
+
+        private static final String TAB1 = "구역";
+        private static final String TAB2 = "깃발";
+
+        public RankingPagerAdapter(FragmentManager fm) {
+            super(fm);
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            switch (position) {
+                case 0: return new NumZonesFragment();
+                case 1: return new NumFlagsInZoneFragment();
+                default: return null;
+            }
+        }
+
+        @Override
+        public int getCount() {
+            return 2;
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            switch (position) {
+                case 0: return TAB1;
+                case 1: return TAB2;
+                default: return null;
+            }
+        }
+
     }
 
     private class RankingAdapter extends RecyclerView.Adapter<RankingAdapter.RankingItemVH> {
@@ -147,7 +197,7 @@ public class RankingDialogFragment extends DialogFragment {
                 Toast.makeText(getContext(), "랭킹을 불러오지 못했습니다.", Toast.LENGTH_SHORT)
                         .show();
             } else {
-                mRecyclerView.setAdapter(new RankingAdapter(rankings));
+//                mRecyclerView.setAdapter(new RankingAdapter(rankings));
             }
         }
 
