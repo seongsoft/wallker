@@ -6,4 +6,10 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never" />
+    <Item
+        android:id="@+id/action_location_refresh"
+        android:title="@string/action_rotate"
+        android:icon="@drawable/ic_gps_not_fixed_white_24dp"
+        app:showAsAction="always"
+        />
 </menu>

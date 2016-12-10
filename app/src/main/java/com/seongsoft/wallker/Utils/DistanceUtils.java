@@ -1,4 +1,4 @@
-package com.seongsoft.wallker.Utils;
+package com.seongsoft.wallker.utils;
 
 /**
  * Created by BeINone on 2016-10-04.
@@ -21,6 +21,10 @@ public class DistanceUtils {
         return dist;
     }
 
+    public static double calKcal(double weight, double distance) {
+        return weight * distance;
+    }
+
     // 주어진 도(degree) 값을 라디언으로 변환
     private static double deg2rad(double deg){
         return (double)(deg * Math.PI / (double)180d);
@@ -31,8 +35,5 @@ public class DistanceUtils {
         return (double)(rad * (double)180d / Math.PI);
     }
 
-    public static double calKcal(double weight, double distance) {
-        return weight * distance;
-    }
 
 }

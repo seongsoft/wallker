@@ -1,10 +1,10 @@
-package com.seongsoft.wallker.Utils;
+package com.seongsoft.wallker.utils;
 
 import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.maps.GeoApiContext;
-import com.google.maps.model.LatLng;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -29,14 +29,13 @@ import java.util.List;
  * Created by dsm_025 on 2016-09-18.
  */
 public class RoadTracker {
-
     private static final String TAG = "RoadTracker";
     private GoogleMap mMap;
     private GeoApiContext mContext;
     private ArrayList<LatLng> mCapturedLocations = new ArrayList<LatLng>();        //지나간 좌표 들을 저장하는 List
     private static final int PAGINATION_OVERLAP = 5;
     private static final int PAGE_SIZE_LIMIT = 100;
-    private ArrayList<com.google.android.gms.maps.model.LatLng> mapPoints;
+    private ArrayList<LatLng> mapPoints;
 
     int totalDistance;
 
@@ -47,7 +46,7 @@ public class RoadTracker {
     //    public void drawCorrentPath(ArrayList<LatLng> checkedLocations){
 //        getJsonData().get();
 //    }
-    public ArrayList<com.google.android.gms.maps.model.LatLng> getJsonData(final LatLng startPoint, final LatLng endPoint){
+    public ArrayList<LatLng> getJsonData(final LatLng startPoint, final LatLng endPoint){
         Thread thread = new Thread(){
             @Override
             public void run(){
@@ -61,11 +60,11 @@ public class RoadTracker {
                     httpPost.setURI(uri);
 
                     List<BasicNameValuePair> nameValuePairs = new ArrayList<BasicNameValuePair>();
-                    nameValuePairs.add(new BasicNameValuePair("startX", Double.toString(startPoint.lng)));
-                    nameValuePairs.add(new BasicNameValuePair("startY", Double.toString(startPoint.lat)));
+                    nameValuePairs.add(new BasicNameValuePair("startX", Double.toString(startPoint.longitude)));
+                    nameValuePairs.add(new BasicNameValuePair("startY", Double.toString(startPoint.latitude)));
 
-                    nameValuePairs.add(new BasicNameValuePair("endX", Double.toString(endPoint.lng)));
-                    nameValuePairs.add(new BasicNameValuePair("endY", Double.toString(endPoint.lat)));
+                    nameValuePairs.add(new BasicNameValuePair("endX", Double.toString(endPoint.longitude)));
+                    nameValuePairs.add(new BasicNameValuePair("endY", Double.toString(endPoint.latitude)));
 
                     nameValuePairs.add(new BasicNameValuePair("startName", "출발지"));
                     nameValuePairs.add(new BasicNameValuePair("endName", "도착지"));
@@ -82,7 +81,7 @@ public class RoadTracker {
                     Log.d(TAG, "run: " + message);
                     String responseString;
                     if(response.getEntity() != null)
-                       responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
+                        responseString = EntityUtils.toString(response.getEntity(), HTTP.UTF_8);
                     else
                         return;
                     String strData = "";
@@ -193,4 +192,5 @@ public class RoadTracker {
     public int getDistance(){
         return totalDistance;
     }
+
 }

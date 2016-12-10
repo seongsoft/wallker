@@ -138,20 +138,20 @@
             </android.support.v7.widget.CardView>
 
             <android.support.v7.widget.CardView
-                android:id="@+id/cv_kcal"
+                android:id="@+id/cv_step"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 app:cardBackgroundColor="@android:color/holo_green_dark">
 
                 <LinearLayout
-                    android:id="@+id/layout_kcal"
+                    android:id="@+id/layout_step"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:orientation="vertical"
                     android:padding="4dp">
 
                     <ImageView
-                        android:id="@+id/iv_kcal"
+                        android:id="@+id/step"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_horizontal"
@@ -163,7 +163,7 @@
                         android:layout_gravity="center_horizontal">
 
                         <TextView
-                            android:id="@+id/tv_kcal"
+                            android:id="@+id/tv_step"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textColor="@android:color/white" />
@@ -173,7 +173,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginLeft="2dp"
                             android:layout_marginStart="2dp"
-                            android:text="@string/kcal"
+                            android:text="@string/step"
                             android:textColor="@android:color/white" />
 
                     </LinearLayout>
