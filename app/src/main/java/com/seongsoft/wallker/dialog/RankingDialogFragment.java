@@ -34,11 +34,12 @@ public class RankingDialogFragment extends DialogFragment {
 //        mRecyclerView = (RecyclerView) v.findViewById(R.id.rv_ranking);
 //        mRecyclerView.setHasFixedSize(true);
 //        mRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        mTabLayout = (TabLayout) v.findViewById(R.id.tabs_ranking);
         mViewPager = (ViewPager) v.findViewById(R.id.viewpager_ranking);
-
         RankingPagerAdapter adapter = new RankingPagerAdapter(getChildFragmentManager());
         mViewPager.setAdapter(adapter);
+
+        mTabLayout = (TabLayout) v.findViewById(R.id.tabs_ranking);
+        mTabLayout.setupWithViewPager(mViewPager);
 
         return v;
     }

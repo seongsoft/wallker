@@ -46,7 +46,7 @@
                         android:layout_marginEnd="2dp"
                         android:layout_marginRight="2dp"
                         android:scaleType="fitCenter"
-                        android:src="@drawable/ic_flag_white" />
+                        android:src="@drawable/ic_flag_border" />
 
                     <TextView
                         android:id="@+id/tv_num_flags"

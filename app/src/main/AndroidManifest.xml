@@ -26,6 +26,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".activity.MapActivity"
+            android:theme="@style/AppTheme.Dark" />
+        <activity android:name=".activity.LoginActivity"
+            android:theme="@style/AppTheme.Dark" />
+        <activity android:name=".activity.SignupActivity"
+            android:theme="@style/AppTheme.Dark" />
 
     </application>
     

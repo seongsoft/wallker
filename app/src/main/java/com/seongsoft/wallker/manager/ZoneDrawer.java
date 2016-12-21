@@ -8,6 +8,8 @@ import android.widget.Toast;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.seongsoft.wallker.R;
@@ -40,12 +42,14 @@ public class ZoneDrawer {
     private Member mMember;
 
     private List<Polygon> mPolygons;
+    private List<Marker> mMarkers;
 
     public ZoneDrawer(Context context, GoogleMap map, Member member) {
         mContext = context;
         mMap = map;
         mMember = member;
         mPolygons = new ArrayList<>();
+        mMarkers = new ArrayList<>();
     }
 
     public void drawZones(LatLngBounds bounds) {
@@ -84,39 +88,54 @@ public class ZoneDrawer {
         }
     }
 
-    public void drawZone(LatLngBounds zoneBounds, String zoneStatus) {
-        com.google.android.gms.maps.model.LatLng southwest = zoneBounds.southwest;
-        com.google.android.gms.maps.model.LatLng northeast = zoneBounds.northeast;
-        com.google.android.gms.maps.model.LatLng southeast =
-                new com.google.android.gms.maps.model.LatLng(
-                        southwest.latitude, northeast.longitude);
-        com.google.android.gms.maps.model.LatLng northwest =
-                new com.google.android.gms.maps.model.LatLng(
-                        northeast.latitude, southwest.longitude);
+    public void drawZone(LatLngBounds zoneBounds, int numFlags, String userid) {
+        LatLng southwest = zoneBounds.southwest;
+        LatLng northeast = zoneBounds.northeast;
+        LatLng southeast = new LatLng(southwest.latitude, northeast.longitude);
+        LatLng northwest = new LatLng(northeast.latitude, southwest.longitude);
 
         int color = 0;
-        if (zoneStatus != null) {
-            if (zoneStatus.equals("mine")) {
+        if (userid != null) {
+            if (userid.equals(mMember.getId())) {
                 color = ContextCompat.getColor(mContext, R.color.mine);
-            } else if (zoneStatus.equals("others")) {
+            } else {
                 color = ContextCompat.getColor(mContext, R.color.others);
             }
         }
 
-        int location = 0;
-        if ((location =
-                findPolygonLocation((ArrayList<Polygon>) mPolygons, zoneBounds.southwest)) == -1) {
-            if (color == 0) {
+        double markerLat = southwest.latitude + ZoneConst.MARKER_LAT_INTERVAL;
+        double markerLng = southwest.longitude + ZoneConst.MARKER_LNG_INTERVAL;
+        int polygonLoc = 0;
+        if ((polygonLoc = findPolygonLocation((ArrayList<Polygon>) mPolygons,
+                zoneBounds.southwest)) == -1) {
+            if (userid == null) {
                 mPolygons.add(mMap.addPolygon(
-                        new PolygonOptions().add(southwest, southeast, northeast, northwest)));
+                        new PolygonOptions().add(southwest, southeast, northeast, northwest)
+                                .strokeWidth(3.0f)
+                                .strokeColor(ContextCompat.getColor(mContext,
+                                        R.color.colorPrimaryDark))));
             } else {
                 mPolygons.add(mMap.addPolygon(new PolygonOptions()
                         .add(southwest, southeast, northeast, northwest)
-                        .fillColor(color)));
+                        .fillColor(color)
+                        .strokeWidth(3.0f)
+                        .strokeColor(ContextCompat.getColor(mContext, R.color.colorPrimaryDark))));
+                mMarkers.add(mMap.addMarker(new MarkerOptions()
+                        .title(userid + "   " + numFlags + "개")
+                        .position(new LatLng(markerLat, markerLng))));
             }
-        } else if (mPolygons.get(location).getFillColor() != color) {
-            mPolygons.get(location).setFillColor(color);
+        } else {
+            if (mPolygons.get(polygonLoc).getFillColor() != color) {
+                mPolygons.get(polygonLoc).setFillColor(color);
+            }
+            int markerLoc = findMarkerLocation((ArrayList<Marker>) mMarkers,
+                    new LatLng(markerLat, markerLng));
+            if (markerLoc > -1 &&
+                    mMarkers.get(markerLoc).getTitle().equals(userid + "   " + numFlags + "개")) {
+                mMarkers.get(markerLoc).setTitle(userid + "   " + numFlags + "개");
+            }
         }
+
     }
 
     private int findPolygonLocation(ArrayList<Polygon> polygons, LatLng southwest) {
@@ -124,6 +143,18 @@ public class ZoneDrawer {
             if (polygons.get(location) != null &&
                     polygons.get(location).getPoints().get(0).latitude == southwest.latitude &&
                     polygons.get(location).getPoints().get(0).longitude == southwest.longitude) {
+                return location;
+            }
+        }
+
+        return -1;
+    }
+
+    private int findMarkerLocation(ArrayList<Marker> markers, LatLng latLng) {
+        for (int location = 0; location < markers.size(); location++) {
+            if (markers.get(location) != null &&
+                    markers.get(location).getPosition().latitude == latLng.latitude &&
+                    markers.get(location).getPosition().longitude == latLng.longitude) {
                 return location;
             }
         }
@@ -200,19 +231,17 @@ public class ZoneDrawer {
                 Toast.makeText(mContext, MSG_ERROR, Toast.LENGTH_SHORT).show();
             } else {
                 try {
-                    String zoneStatus = null;
-                    if (jsonObject.has("userid")) {
-                        if (jsonObject.getString("userid").equals(mMember.getId())) {
-                            zoneStatus = "mine";
-                        } else {
-                            zoneStatus = "others";
-                        }
+                    int numFlags = 0;
+                    String userid = null;
+                    if (jsonObject.has("numFlags") && jsonObject.has("userid")) {
+                        numFlags = jsonObject.getInt("numFlags");
+                        userid = jsonObject.getString("userid");
                     }
                     drawZone(new LatLngBounds(
                             new LatLng(jsonObject.getDouble("southwestLat"),
                                     jsonObject.getDouble("southwestLng")),
                             new LatLng(jsonObject.getDouble("northeastLat"),
-                                    jsonObject.getDouble("northeastLng"))), zoneStatus);
+                                    jsonObject.getDouble("northeastLng"))), numFlags, userid);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }

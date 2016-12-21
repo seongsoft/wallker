@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -55,7 +56,6 @@ import com.seongsoft.wallker.manager.DatabaseManager;
 import com.seongsoft.wallker.manager.JSONManager;
 import com.seongsoft.wallker.manager.TreasureManager;
 import com.seongsoft.wallker.manager.ZoneDrawer;
-import com.seongsoft.wallker.utils.BitmapUtils;
 import com.seongsoft.wallker.utils.PermissionUtils;
 import com.seongsoft.wallker.utils.RoadTracker;
 
@@ -584,7 +584,7 @@ public class MapViewFragment extends Fragment implements
 
     private Marker addMarker(double latitude, double longitude) {
         return mMap.addMarker(new MarkerOptions()
-                .position(new com.google.android.gms.maps.model.LatLng(latitude, longitude))
+                .position(new LatLng(latitude, longitude))
                 .icon(getPersonBitmapDescriptor()));
     }
 
@@ -594,8 +594,10 @@ public class MapViewFragment extends Fragment implements
     }
 
     private BitmapDescriptor getPersonBitmapDescriptor() {
-        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(getContext(), R.drawable.ic_person, 25, 50);
-        return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
+//        Bitmap personBitmap = BitmapUtils.resizeBitmap(getContext(), R.drawable.ic_person, 25, 50);
+//        return BitmapDescriptorFactory.fromBitmap(personBitmap);
+        Bitmap personBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.ic_person);
+        return BitmapDescriptorFactory.fromBitmap(personBitmap);
     }
 
     private void setTime() {
@@ -698,7 +700,7 @@ public class MapViewFragment extends Fragment implements
                         }
                     } else if (zoneJObject.getString("userid").equals(mMember.getId())) {
                         return MSG_ALREADY_YOURS;
-                    } else if (zoneJObject.getInt("numFlags") > mMember.getNumFlags()) {
+                    } else if (zoneJObject.getInt("numFlags") >= mMember.getNumFlags()) {
                         return MSG_NOT_ENOUGH_FLAGS;
                     } else {
                         return new JSONObject()

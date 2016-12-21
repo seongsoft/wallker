@@ -2,6 +2,7 @@ package com.seongsoft.wallker.manager;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -13,7 +14,6 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.maps.GeoApiContext;
 import com.seongsoft.wallker.R;
 import com.seongsoft.wallker.beans.Treasure;
-import com.seongsoft.wallker.utils.BitmapUtils;
 import com.seongsoft.wallker.utils.RoadTracker;
 
 import java.util.ArrayList;
@@ -87,7 +87,9 @@ public class TreasureManager {
     }
 
     private BitmapDescriptor getTreasureBitmapDescriptor() {
-        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.ic_flag, 50, 50);
+//        Bitmap treasureBitmap = BitmapUtils.resizeBitmap(mContext, R.drawable.ic_flag, 50, 50);
+        Bitmap treasureBitmap = BitmapFactory.decodeResource(
+                mContext.getResources(), R.drawable.ic_flag);
         return BitmapDescriptorFactory.fromBitmap(treasureBitmap);
     }
 

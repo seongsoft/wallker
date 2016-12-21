@@ -1,6 +1,7 @@
 package com.seongsoft.wallker.adapter;
 
 import android.content.Context;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,16 +30,32 @@ public class RankingAdapter extends RecyclerView.Adapter<RankingAdapter.RankingV
     }
 
     @Override
-    public RankingAdapter.RankingViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public RankingViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(mContext).inflate(R.layout.item_ranking, parent, false);
-        return new RankingAdapter.RankingViewHolder(v);
+        return new RankingViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(RankingAdapter.RankingViewHolder holder, int position) {
+    public void onBindViewHolder(RankingViewHolder holder, int position) {
         Ranking ranking = mRankings.get(position);
 
         holder.mRankingTV.setText(String.valueOf(ranking.getRanking()));
+        switch (ranking.getRanking()) {
+            case 1:
+                ((View) holder.mRankingTV.getParent())
+                        .setBackgroundColor(ContextCompat.getColor(mContext, R.color.gold));
+                break;
+            case 2:
+                ((View) holder.mRankingTV.getParent())
+                        .setBackgroundColor(ContextCompat.getColor(mContext, R.color.silver));
+                break;
+            case 3:
+                ((View) holder.mRankingTV.getParent())
+                        .setBackgroundColor(ContextCompat.getColor(mContext, R.color.bronze));
+                break;
+            default:
+                break;
+        }
         holder.mIDTV.setText(ranking.getId());
         holder.mNumZonesTV.setText(String.valueOf(ranking.getNumZones()));
     }
